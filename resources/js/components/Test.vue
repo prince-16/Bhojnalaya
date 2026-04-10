@@ -1,18 +1,10 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 
 const count = ref(0)
 
-const message = computed(() => {
-  return count.value === 0 ? 'Start clicking the buttons.' : `Current count is ${count.value}.`
-})
-
 function increment() {
-  count.value += 1
-}
-
-function decrement() {
-  count.value -= 1
+  count.value++
 }
 
 function reset() {
@@ -22,13 +14,10 @@ function reset() {
 
 <template>
   <section class="counter-card">
-    <p class="label">Counter value</p>
-    <h2>{{ count }}</h2>
-    <p class="message">{{ message }}</p>
+    <h2>Count: {{ count }}</h2>
 
     <div class="actions">
-      <button type="button" @click="decrement">-1</button>
-      <button type="button" @click="increment">+1</button>
+      <button type="button" @click="increment">Increase</button>
       <button type="button" class="secondary" @click="reset">Reset</button>
     </div>
   </section>
@@ -42,25 +31,13 @@ function reset() {
   background: #f8fafc;
 }
 
-.label {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #64748b;
-}
-
 h2 {
-  margin: 8px 0;
-  font-size: 3rem;
-}
-
-.message {
   margin: 0 0 16px;
-  color: #334155;
+  font-size: 2rem;
 }
 
 .actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 10px;
 }
 
