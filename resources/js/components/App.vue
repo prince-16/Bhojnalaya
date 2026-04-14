@@ -1,5 +1,8 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
+import OrderScreen from './pos/OrderScreen.vue'
+import TableScreen from './pos/TableScreen.vue'
+import TopBar from './pos/TopBar.vue'
 
 const sections = [
   {
@@ -128,7 +131,6 @@ const filteredItems = computed(() => {
 })
 
 const totalAmount = computed(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0))
-const totalQuantity = computed(() => cart.reduce((sum, item) => sum + item.quantity, 0))
 
 function iconPath(icon) {
   switch (icon) {
@@ -163,8 +165,8 @@ function iconPath(icon) {
   }
 }
 
-function openTable(table, sectionTitle) {
-  selectedTable.value = { ...table, sectionTitle }
+function openTable(payload) {
+  selectedTable.value = { ...payload.table, sectionTitle: payload.sectionTitle }
   view.value = 'order'
 }
 
@@ -192,19 +194,23 @@ function addItem(item) {
   })
 }
 
-function updateQuantity(itemId, delta) {
-  const cartItem = cart.find((item) => item.id === itemId)
+function updateQuantity(payload) {
+  const cartItem = cart.find((item) => item.id === payload.itemId)
 
   if (!cartItem) {
     return
   }
 
-  cartItem.quantity += delta
+  cartItem.quantity += payload.delta
 
   if (cartItem.quantity <= 0) {
-    const index = cart.findIndex((item) => item.id === itemId)
+    const index = cart.findIndex((item) => item.id === payload.itemId)
     cart.splice(index, 1)
   }
+}
+
+function updateFlag(payload) {
+  flags[payload.key] = payload.value
 }
 
 function formatCurrency(value) {
@@ -214,273 +220,44 @@ function formatCurrency(value) {
 
 <template>
   <main class="petpooja-screen">
-    <header class="topbar">
-      <div class="topbar__brand">
-        <button class="icon-button icon-button--menu" aria-label="Open menu">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
+    <TopBar :top-menu="topMenu" :icon-path="iconPath" @new-order="goBackToTables" />
 
-        <div class="brand-mark">Bp</div>
+    <TableScreen
+      v-if="view === 'tables'"
+      :quick-actions="quickActions"
+      :legend-items="legendItems"
+      :sections="sections"
+      @open-table="openTable"
+    />
 
-        <button class="primary-button">New Order</button>
-
-        <label class="search-box">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M10.5 5a5.5 5.5 0 1 0 3.47 9.77l3.63 3.63a.75.75 0 1 0 1.06-1.06l-3.63-3.63A5.5 5.5 0 0 0 10.5 5Zm-4 5.5a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" />
-          </svg>
-          <input type="text" placeholder="Bill No" />
-        </label>
-      </div>
-
-      <div class="topbar__actions">
-        <div class="support-card">
-          <div class="support-card__icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1-.24c1.12.37 2.31.56 3.54.56a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.4 21 3 13.6 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.23.19 2.42.56 3.54a1 1 0 0 1-.24 1l-2.2 2.25Z" />
-            </svg>
-          </div>
-          <div>
-            <p>Call For Support</p>
-            <strong>9099912483</strong>
-          </div>
-        </div>
-
-        <nav class="menu-icons" aria-label="Main navigation">
-          <button v-for="item in topMenu" :key="item.label" class="menu-icon-button" :aria-label="item.label">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path :d="iconPath(item.icon)" />
-            </svg>
-          </button>
-        </nav>
-
-        <button class="menu-icon-button power-button" aria-label="Logout">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 3.75a.75.75 0 0 1 .75.75v6.69a.75.75 0 0 1-1.5 0V4.5a.75.75 0 0 1 .75-.75Zm4.62 2.52a.75.75 0 0 1 1.06.04 8 8 0 1 1-11.36 0 .75.75 0 1 1 1.1 1.02 6.5 6.5 0 1 0 9.22 0 .75.75 0 0 1-.02-1.06Z" />
-          </svg>
-        </button>
-      </div>
-    </header>
-
-    <section v-if="view === 'tables'" class="content-shell">
-      <div class="content-header">
-        <div>
-          <p class="eyebrow">Table View</p>
-        </div>
-
-        <div class="content-header__right">
-          <button class="refresh-button" aria-label="Refresh tables">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1.75a.75.75 0 0 0-1.28-.53L7.97 3.97a.75.75 0 0 0 0 1.06l2.75 2.75A.75.75 0 0 0 12 7.25V5.5a6.5 6.5 0 1 1-6.37 7.8.75.75 0 0 0-1.46.34A8 8 0 1 0 17.65 6.35Z" />
-            </svg>
-          </button>
-
-          <button v-for="action in quickActions" :key="action.label" class="header-action" :class="{ 'header-action--solid': action.emphasized }">
-            {{ action.label }}
-          </button>
-        </div>
-      </div>
-
-      <div class="toolbar">
-        <div class="toolbar__actions">
-          <button class="secondary-button">+ Table Reservation</button>
-          <button class="secondary-button">+ Contactless</button>
-        </div>
-
-        <div class="toolbar__toggles">
-          <label class="toggle-card">
-            <input type="radio" checked />
-            <span>Move KOT / Items</span>
-          </label>
-
-          <label class="toggle-card toggle-card--muted">
-            <input type="radio" />
-            <span>Blank Table</span>
-          </label>
-
-          <div class="legend">
-            <span v-for="item in legendItems" :key="item.label" class="legend__item">
-              <i :style="{ backgroundColor: item.color }"></i>
-              {{ item.label }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <section v-for="section in sections" :key="section.title" class="floor-block">
-        <h2>{{ section.title }}</h2>
-
-        <div class="table-grid" :class="{ 'table-grid--hall': section.title === 'Party Hall' }">
-          <button
-            v-for="table in section.tables"
-            :key="table.id"
-            class="table-card"
-            :class="`table-card--${table.status}`"
-            @click="openTable(table, section.title)"
-          >
-            <span>{{ table.label }}</span>
-          </button>
-        </div>
-      </section>
-
-      <div class="enquiry-banner">For Inquiry Call or WhatsApp : 9034142334</div>
-    </section>
-
-    <section v-else class="order-layout">
-      <aside class="category-sidebar">
-        <button class="category-sidebar__active">
-          <span>{{ activeCategory.name }}</span>
-          <span class="category-sidebar__chevron">▾</span>
-        </button>
-
-        <button
-          v-for="category in categories"
-          :key="category.id"
-          class="category-link"
-          :class="{ 'category-link--selected': selectedCategoryId === category.id }"
-          @click="selectCategory(category.id)"
-        >
-          {{ category.name }}
-        </button>
-      </aside>
-
-      <section class="order-board">
-        <div class="order-filters">
-          <label class="search-box search-box--wide">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M10.5 5a5.5 5.5 0 1 0 3.47 9.77l3.63 3.63a.75.75 0 1 0 1.06-1.06l-3.63-3.63A5.5 5.5 0 0 0 10.5 5Zm-4 5.5a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" />
-            </svg>
-            <input v-model="itemSearch" type="text" placeholder="Search item" />
-          </label>
-
-          <input v-model="shortCode" class="short-code-input" type="text" placeholder="Short Code" />
-        </div>
-
-        <div class="item-grid">
-          <button
-            v-for="item in filteredItems"
-            :key="item.id"
-            class="menu-item-card"
-            :class="`menu-item-card--${item.accent}`"
-            @click="addItem(item)"
-          >
-            <span>{{ item.name }}</span>
-            <strong v-if="item.price > 0">{{ formatCurrency(item.price) }}</strong>
-          </button>
-        </div>
-
-        <div v-if="filteredItems.length === 0" class="item-grid__empty">
-          No items available in this category.
-        </div>
-      </section>
-
-      <aside class="cart-panel">
-        <div class="order-type-tabs">
-          <button
-            v-for="type in orderTypes"
-            :key="type"
-            class="order-type-tab"
-            :class="{ 'order-type-tab--active': selectedOrderType === type }"
-            @click="selectedOrderType = type"
-          >
-            {{ type }}
-          </button>
-        </div>
-
-        <div class="cart-top-meta">
-          <div class="action-strip">
-            <button v-for="tab in actionTabs" :key="tab" class="action-strip__button">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path :d="iconPath(tab === 'Table' ? 'fork' : tab === 'Guest' ? 'guest' : tab === 'Group' ? 'group' : tab === 'Notes' ? 'note' : 'order')" />
-              </svg>
-              <span>{{ tab }}</span>
-            </button>
-          </div>
-
-          <div class="selected-table-card">
-            <div>
-              <strong>{{ selectedTable?.sectionTitle }}</strong>
-              <p>Table {{ selectedTable?.label }}</p>
-            </div>
-            <button class="back-link" @click="goBackToTables">Change</button>
-          </div>
-        </div>
-
-        <div class="cart-table-header">
-          <span>ITEMS</span>
-          <span>CHECK ITEMS</span>
-          <span>QTY.</span>
-          <span>PRICE</span>
-        </div>
-
-        <div v-if="cart.length === 0" class="empty-cart">
-          <div class="empty-cart__icon">🍽</div>
-          <strong>No Item Selected</strong>
-          <p>Please Select Item from Left Menu Item</p>
-        </div>
-
-        <div v-else class="cart-items">
-          <article v-for="item in cart" :key="item.id" class="cart-item">
-            <div>
-              <strong>{{ item.name }}</strong>
-              <p>Selected from {{ activeCategory.name }}</p>
-            </div>
-            <label class="cart-check">
-              <input type="checkbox" />
-            </label>
-            <div class="quantity-stepper">
-              <button @click="updateQuantity(item.id, -1)">-</button>
-              <span>{{ item.quantity }}</span>
-              <button @click="updateQuantity(item.id, 1)">+</button>
-            </div>
-            <strong>{{ formatCurrency(item.price * item.quantity) }}</strong>
-          </article>
-        </div>
-
-        <div class="cart-controls">
-          <div class="cart-controls__row">
-            <button class="cart-cta cart-cta--red">Bogo Offer</button>
-            <button class="cart-cta cart-cta--outline">Split</button>
-            <label class="check-flag">
-              <input v-model="flags.complimentary" type="checkbox" />
-              <span>Complimentary</span>
-            </label>
-            <div class="cart-total">Total <strong>{{ formatCurrency(totalAmount) }}</strong></div>
-          </div>
-
-          <div class="cart-controls__row cart-controls__row--payments">
-            <label v-for="mode in paymentModes" :key="mode" class="payment-radio">
-              <input v-model="selectedPaymentMode" type="radio" :value="mode" />
-              <span>{{ mode }}</span>
-            </label>
-          </div>
-
-          <div class="cart-controls__row cart-controls__row--flags">
-            <label class="check-flag">
-              <input v-model="flags.paid" type="checkbox" />
-              <span>It's Paid</span>
-            </label>
-            <label class="check-flag">
-              <input v-model="flags.loyalty" type="checkbox" />
-              <span>Loyalty</span>
-            </label>
-            <label class="check-flag">
-              <input v-model="flags.feedbackSms" type="checkbox" />
-              <span>Send Feedback SMS</span>
-            </label>
-          </div>
-
-          <div class="bottom-actions">
-            <button class="bottom-actions__primary">Save</button>
-            <button class="bottom-actions__primary">Save & Print</button>
-            <button class="bottom-actions__primary">Save & Bill</button>
-            <button class="bottom-actions__dark">KOT</button>
-            <button class="bottom-actions__dark">KOT & Print</button>
-            <button class="bottom-actions__ghost">Hold</button>
-          </div>
-        </div>
-      </aside>
-    </section>
+    <OrderScreen
+      v-else
+      :categories="categories"
+      :selected-category-id="selectedCategoryId"
+      :item-search="itemSearch"
+      :short-code="shortCode"
+      :filtered-items="filteredItems"
+      :order-types="orderTypes"
+      :selected-order-type="selectedOrderType"
+      :action-tabs="actionTabs"
+      :selected-table="selectedTable"
+      :cart="cart"
+      :active-category="activeCategory"
+      :flags="flags"
+      :total-amount="totalAmount"
+      :payment-modes="paymentModes"
+      :selected-payment-mode="selectedPaymentMode"
+      :icon-path="iconPath"
+      :format-currency="formatCurrency"
+      @select-category="selectCategory"
+      @update:item-search="itemSearch = $event"
+      @update:short-code="shortCode = $event"
+      @add-item="addItem"
+      @update:selected-order-type="selectedOrderType = $event"
+      @go-back="goBackToTables"
+      @update-quantity="updateQuantity"
+      @toggle-flag="updateFlag"
+      @update:selected-payment-mode="selectedPaymentMode = $event"
+    />
   </main>
 </template>
