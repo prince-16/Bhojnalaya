@@ -1,4 +1,6 @@
 <script setup>
+import AppButton from '../ui/AppButton.vue'
+
 const props = defineProps({
   quickActions: {
     type: Array,
@@ -25,22 +27,22 @@ defineEmits(['open-table'])
       </div>
 
       <div class="content-header__right">
-        <button class="refresh-button" aria-label="Refresh tables">
+        <AppButton class="refresh-button" aria-label="Refresh tables">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1.75a.75.75 0 0 0-1.28-.53L7.97 3.97a.75.75 0 0 0 0 1.06l2.75 2.75A.75.75 0 0 0 12 7.25V5.5a6.5 6.5 0 1 1-6.37 7.8.75.75 0 0 0-1.46.34A8 8 0 1 0 17.65 6.35Z" />
           </svg>
-        </button>
+        </AppButton>
 
-        <button v-for="action in props.quickActions" :key="action.label" class="header-action" :class="{ 'header-action--solid': action.emphasized }">
+        <AppButton v-for="action in props.quickActions" :key="action.label" class="header-action" :class="{ 'header-action--solid': action.emphasized }">
           {{ action.label }}
-        </button>
+        </AppButton>
       </div>
     </div>
 
     <div class="toolbar">
       <div class="toolbar__actions">
-        <button class="secondary-button">+ Table Reservation</button>
-        <button class="secondary-button">+ Contactless</button>
+        <AppButton class="secondary-button">+ Table Reservation</AppButton>
+        <AppButton class="secondary-button">+ Contactless</AppButton>
       </div>
 
       <div class="toolbar__toggles">
@@ -67,7 +69,7 @@ defineEmits(['open-table'])
       <h2>{{ section.title }}</h2>
 
       <div class="table-grid" :class="{ 'table-grid--hall': section.title === 'Party Hall' }">
-        <button
+        <AppButton
           v-for="table in section.tables"
           :key="table.id"
           class="table-card"
@@ -75,7 +77,7 @@ defineEmits(['open-table'])
           @click="$emit('open-table', { table, sectionTitle: section.title })"
         >
           <span>{{ table.label }}</span>
-        </button>
+        </AppButton>
       </div>
     </section>
 

@@ -1,4 +1,6 @@
 <script setup>
+import AppButton from '../ui/AppButton.vue'
+
 const props = defineProps({
   topMenu: {
     type: Array,
@@ -16,15 +18,15 @@ defineEmits(['new-order'])
 <template>
   <header class="topbar">
     <div class="topbar__brand">
-      <button class="icon-button icon-button--menu" aria-label="Open menu">
+      <AppButton class="icon-button icon-button--menu" aria-label="Open menu">
         <span></span>
         <span></span>
         <span></span>
-      </button>
+      </AppButton>
 
       <div class="brand-mark">Bp</div>
 
-      <button class="primary-button" @click="$emit('new-order')">New Order</button>
+      <AppButton class="primary-button" @click="$emit('new-order')">New Order</AppButton>
 
       <label class="search-box">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -48,18 +50,18 @@ defineEmits(['new-order'])
       </div>
 
       <nav class="menu-icons" aria-label="Main navigation">
-        <button v-for="item in props.topMenu" :key="item.label" class="menu-icon-button" :aria-label="item.label">
+        <AppButton v-for="item in props.topMenu" :key="item.label" class="menu-icon-button" :aria-label="item.label">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path :d="props.iconPath(item.icon)" />
           </svg>
-        </button>
+        </AppButton>
       </nav>
 
-      <button class="menu-icon-button power-button" aria-label="Logout">
+      <AppButton class="menu-icon-button power-button" aria-label="Logout">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3.75a.75.75 0 0 1 .75.75v6.69a.75.75 0 0 1-1.5 0V4.5a.75.75 0 0 1 .75-.75Zm4.62 2.52a.75.75 0 0 1 1.06.04 8 8 0 1 1-11.36 0 .75.75 0 1 1 1.1 1.02 6.5 6.5 0 1 0 9.22 0 .75.75 0 0 1-.02-1.06Z" />
         </svg>
-      </button>
+      </AppButton>
     </div>
   </header>
 </template>
