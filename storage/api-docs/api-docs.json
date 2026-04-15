@@ -1,0 +1,1144 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Bhojnalaya API",
+        "description": "REST API documentation for tables, menu items, orders, and order items.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:8000",
+            "description": "Local development server"
+        }
+    ],
+    "paths": {
+        "/api/menu-items": {
+            "get": {
+                "tags": [
+                    "Menu Items"
+                ],
+                "summary": "List menu items",
+                "operationId": "4ebff4229af20351ff03e10a24a2fee5",
+                "parameters": [
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Starters"
+                        }
+                    },
+                    {
+                        "name": "is_available",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Menu items fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/MenuItem"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Menu Items"
+                ],
+                "summary": "Create a menu item",
+                "operationId": "66c0502470d5f2b36a95aa1310af7ab8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MenuItemRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Menu item created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MenuItem"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/menu-items/{menu_item}": {
+            "get": {
+                "tags": [
+                    "Menu Items"
+                ],
+                "summary": "Get a single menu item",
+                "operationId": "9aa5713e6fb2bad003ae346861e62e32",
+                "parameters": [
+                    {
+                        "name": "menu_item",
+                        "in": "path",
+                        "description": "Menu item ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Menu item fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MenuItem"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Menu Items"
+                ],
+                "summary": "Update a menu item",
+                "operationId": "12af2e566bd8cd44e678b9925b4aeb26",
+                "parameters": [
+                    {
+                        "name": "menu_item",
+                        "in": "path",
+                        "description": "Menu item ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MenuItemRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Menu item updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MenuItem"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Menu Items"
+                ],
+                "summary": "Delete a menu item",
+                "operationId": "f4170c53c8d994a745434a3c0d23679f",
+                "parameters": [
+                    {
+                        "name": "menu_item",
+                        "in": "path",
+                        "description": "Menu item ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Menu item deleted successfully"
+                    }
+                }
+            }
+        },
+        "/api/orders": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "List orders",
+                "operationId": "955bb77a45ae173a485fadb8befed93f",
+                "responses": {
+                    "200": {
+                        "description": "Orders fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Order"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Create an order with optional items",
+                "operationId": "2123ba58dadb22bd6f2c8081af562230",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Order created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Order"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/orders/{order}": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get a single order",
+                "operationId": "8114ac185cc1bf301d8862617e497098",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "description": "Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Order"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Update an order and replace its items",
+                "operationId": "451beac48796437035c70268bc39ee41",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "description": "Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Order updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Order"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Delete an order",
+                "operationId": "983c7813fdcb0d66fd5d1386fa8f6f22",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "description": "Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Order deleted successfully"
+                    }
+                }
+            }
+        },
+        "/api/order-items": {
+            "get": {
+                "tags": [
+                    "Order Items"
+                ],
+                "summary": "List order items",
+                "operationId": "00ef4347ae4117974e08654982418127",
+                "responses": {
+                    "200": {
+                        "description": "Order items fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/OrderItem"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Order Items"
+                ],
+                "summary": "Create an order item",
+                "operationId": "ebd626997709bc1943529afd1010f1b2",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderItemRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Order item created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderItem"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/order-items/{order_item}": {
+            "get": {
+                "tags": [
+                    "Order Items"
+                ],
+                "summary": "Get a single order item",
+                "operationId": "8699abbd250562bdbe21556f605a5692",
+                "parameters": [
+                    {
+                        "name": "order_item",
+                        "in": "path",
+                        "description": "Order item ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order item fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderItem"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Order Items"
+                ],
+                "summary": "Update an order item",
+                "operationId": "11e15ef68dc964e4a346861bf5b3232d",
+                "parameters": [
+                    {
+                        "name": "order_item",
+                        "in": "path",
+                        "description": "Order item ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderItemRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Order item updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderItem"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Order Items"
+                ],
+                "summary": "Delete an order item",
+                "operationId": "2441e7622348886703617368afc2ea0f",
+                "parameters": [
+                    {
+                        "name": "order_item",
+                        "in": "path",
+                        "description": "Order item ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Order item deleted successfully"
+                    }
+                }
+            }
+        },
+        "/api/tables": {
+            "get": {
+                "tags": [
+                    "Tables"
+                ],
+                "summary": "List dining tables",
+                "operationId": "ff9d243a2aac0c783b0b20f5bd9d5913",
+                "responses": {
+                    "200": {
+                        "description": "Dining tables fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Table"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Tables"
+                ],
+                "summary": "Create a dining table",
+                "operationId": "ee3cdb4f76abd42e86f037b17e4d0206",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TableRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Dining table created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Table"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/tables/{table}": {
+            "get": {
+                "tags": [
+                    "Tables"
+                ],
+                "summary": "Get a single dining table",
+                "operationId": "53507a0855b5e513cfccea8c5a56c17c",
+                "parameters": [
+                    {
+                        "name": "table",
+                        "in": "path",
+                        "description": "Table ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dining table fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Table"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Tables"
+                ],
+                "summary": "Update a dining table",
+                "operationId": "d598b5144dac0c77d3ef41d20192669a",
+                "parameters": [
+                    {
+                        "name": "table",
+                        "in": "path",
+                        "description": "Table ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TableRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Dining table updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Table"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Tables"
+                ],
+                "summary": "Delete a dining table",
+                "operationId": "a3c24e6b24285c8d8cbe4bf85db5e816",
+                "parameters": [
+                    {
+                        "name": "table",
+                        "in": "path",
+                        "description": "Table ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Dining table deleted successfully"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Table": {
+                "required": [
+                    "id",
+                    "name",
+                    "capacity",
+                    "status",
+                    "is_active"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "T1"
+                    },
+                    "floor": {
+                        "type": "string",
+                        "example": "Ground Floor",
+                        "nullable": true
+                    },
+                    "capacity": {
+                        "type": "integer",
+                        "example": 4
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "blank"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:00:00.000000Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:00:00.000000Z"
+                    }
+                },
+                "type": "object"
+            },
+            "TableRequest": {
+                "required": [
+                    "name",
+                    "capacity",
+                    "status"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "T1"
+                    },
+                    "floor": {
+                        "type": "string",
+                        "example": "Ground Floor"
+                    },
+                    "capacity": {
+                        "type": "integer",
+                        "example": 4
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "blank"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                },
+                "type": "object"
+            },
+            "MenuItem": {
+                "required": [
+                    "id",
+                    "name",
+                    "category",
+                    "item_type",
+                    "price",
+                    "is_available"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Paneer Tikka"
+                    },
+                    "category": {
+                        "type": "string",
+                        "example": "Starters"
+                    },
+                    "short_code": {
+                        "type": "string",
+                        "example": "PT01",
+                        "nullable": true
+                    },
+                    "item_type": {
+                        "type": "string",
+                        "example": "Veg"
+                    },
+                    "price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 220
+                    },
+                    "is_available": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:05:00.000000Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:05:00.000000Z"
+                    }
+                },
+                "type": "object"
+            },
+            "MenuItemRequest": {
+                "required": [
+                    "name",
+                    "category",
+                    "item_type",
+                    "price"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "Paneer Tikka"
+                    },
+                    "category": {
+                        "type": "string",
+                        "example": "Starters"
+                    },
+                    "short_code": {
+                        "type": "string",
+                        "example": "PT01"
+                    },
+                    "item_type": {
+                        "type": "string",
+                        "example": "Veg"
+                    },
+                    "price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 220
+                    },
+                    "is_available": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                },
+                "type": "object"
+            },
+            "OrderItem": {
+                "required": [
+                    "id",
+                    "order_id",
+                    "menu_item_id",
+                    "quantity",
+                    "unit_price",
+                    "line_total"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "order_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "menu_item_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "unit_price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 220
+                    },
+                    "line_total": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 440
+                    },
+                    "notes": {
+                        "type": "string",
+                        "example": "Less spicy",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:15:00.000000Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:15:00.000000Z"
+                    }
+                },
+                "type": "object"
+            },
+            "OrderItemRequest": {
+                "required": [
+                    "order_id",
+                    "menu_item_id",
+                    "quantity"
+                ],
+                "properties": {
+                    "order_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "menu_item_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "notes": {
+                        "type": "string",
+                        "example": "Less spicy"
+                    }
+                },
+                "type": "object"
+            },
+            "NestedOrderItemRequest": {
+                "required": [
+                    "menu_item_id",
+                    "quantity"
+                ],
+                "properties": {
+                    "menu_item_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "notes": {
+                        "type": "string",
+                        "example": "No onion"
+                    }
+                },
+                "type": "object"
+            },
+            "Order": {
+                "required": [
+                    "id",
+                    "order_number",
+                    "order_type",
+                    "status",
+                    "subtotal",
+                    "tax_amount",
+                    "total"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "table_id": {
+                        "type": "integer",
+                        "example": 1,
+                        "nullable": true
+                    },
+                    "order_number": {
+                        "type": "string",
+                        "example": "ORD-1001"
+                    },
+                    "order_type": {
+                        "type": "string",
+                        "example": "Dine In"
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "open"
+                    },
+                    "subtotal": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 440
+                    },
+                    "tax_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 20
+                    },
+                    "total": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 460
+                    },
+                    "notes": {
+                        "type": "string",
+                        "example": "Serve quickly",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:20:00.000000Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:20:00.000000Z"
+                    },
+                    "table": {
+                        "$ref": "#/components/schemas/Table"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OrderItem"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "OrderRequest": {
+                "required": [
+                    "order_number",
+                    "order_type"
+                ],
+                "properties": {
+                    "table_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "order_number": {
+                        "type": "string",
+                        "example": "ORD-1001"
+                    },
+                    "order_type": {
+                        "type": "string",
+                        "example": "Dine In"
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "open"
+                    },
+                    "tax_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 20
+                    },
+                    "notes": {
+                        "type": "string",
+                        "example": "Less spicy"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NestedOrderItemRequest"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "ValidationError": {
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "example": "The given data was invalid."
+                    },
+                    "errors": {
+                        "properties": {
+                            "name": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "example": "The name field is required."
+                                }
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Tables",
+            "description": "Restaurant dining table management"
+        },
+        {
+            "name": "Menu Items",
+            "description": "Restaurant menu catalog"
+        },
+        {
+            "name": "Orders",
+            "description": "Order creation and billing flow"
+        },
+        {
+            "name": "Order Items",
+            "description": "Line items inside an order"
+        }
+    ]
+}

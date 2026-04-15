@@ -2,14 +2,27 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use OpenApi\Annotations as OA;
 
 class OrderItemController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/api/order-items",
+     *     tags={"Order Items"},
+     *     summary="List order items",
+     *     @OA\Response(
+     *         response=200,
+     *         description="Order items fetched successfully",
+     *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/OrderItem"))
+     *     )
+     * )
+     */
     public function index()
     {
         return response()->json(
@@ -17,6 +30,16 @@ class OrderItemController extends Controller
         );
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/order-items",
+     *     tags={"Order Items"},
+     *     summary="Create an order item",
+     *     @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/OrderItemRequest")),
+     *     @OA\Response(response=201, description="Order item created successfully", @OA\JsonContent(ref="#/components/schemas/OrderItem")),
+     *     @OA\Response(response=422, description="Validation error", @OA\JsonContent(ref="#/components/schemas/ValidationError"))
+     * )
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -43,11 +66,31 @@ class OrderItemController extends Controller
         return response()->json($orderItem->load(['menuItem', 'order']), 201);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/order-items/{order_item}",
+     *     tags={"Order Items"},
+     *     summary="Get a single order item",
+     *     @OA\Parameter(name="order_item", in="path", required=true, description="Order item ID", @OA\Schema(type="integer", example=1)),
+     *     @OA\Response(response=200, description="Order item fetched successfully", @OA\JsonContent(ref="#/components/schemas/OrderItem"))
+     * )
+     */
     public function show(OrderItem $orderItem)
     {
         return response()->json($orderItem->load(['menuItem', 'order']));
     }
 
+    /**
+     * @OA\Put(
+     *     path="/api/order-items/{order_item}",
+     *     tags={"Order Items"},
+     *     summary="Update an order item",
+     *     @OA\Parameter(name="order_item", in="path", required=true, description="Order item ID", @OA\Schema(type="integer", example=1)),
+     *     @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/OrderItemRequest")),
+     *     @OA\Response(response=200, description="Order item updated successfully", @OA\JsonContent(ref="#/components/schemas/OrderItem")),
+     *     @OA\Response(response=422, description="Validation error", @OA\JsonContent(ref="#/components/schemas/ValidationError"))
+     * )
+     */
     public function update(Request $request, OrderItem $orderItem)
     {
         $validated = $request->validate([
@@ -74,6 +117,15 @@ class OrderItemController extends Controller
         return response()->json($orderItem->fresh()->load(['menuItem', 'order']));
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/api/order-items/{order_item}",
+     *     tags={"Order Items"},
+     *     summary="Delete an order item",
+     *     @OA\Parameter(name="order_item", in="path", required=true, description="Order item ID", @OA\Schema(type="integer", example=1)),
+     *     @OA\Response(response=204, description="Order item deleted successfully")
+     * )
+     */
     public function destroy(OrderItem $orderItem)
     {
         $order = $orderItem->order()->firstOrFail();
