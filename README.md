@@ -130,6 +130,14 @@ Or directly:
 php artisan test
 ```
 
+## API Documentation
+
+Swagger UI is available for testing the existing REST API.
+
+- Start the Laravel server with `php artisan serve`
+- Open `http://127.0.0.1:8000/api/documentation`
+- If you change API annotations, regenerate docs with `php artisan l5-swagger:generate`
+
 ## Recommended First-Run Flow
 
 If someone pulls this repository for the first time, this is the safe default process:
