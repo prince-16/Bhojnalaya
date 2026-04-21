@@ -33,51 +33,23 @@ const topMenu = [
   { label: 'Profile', icon: 'user' },
 ]
 
-const categories = [
-  {
-    id: 'fast-food',
-    name: 'Fast Food',
-    items: [
-      { id: 1, name: 'Aloo Tikki Burger', price: 90, accent: 'green' },
-      { id: 2, name: 'Cheese Garlic Bread', price: 140, accent: 'green' },
-      { id: 3, name: 'Chicken Angara (Boneless)', price: 220, accent: 'red' },
-      { id: 4, name: 'Chilli Mushroom', price: 180, accent: 'green' },
-      { id: 5, name: 'Dahi Ke Shole', price: 160, accent: 'green' },
-      { id: 6, name: 'Fry Masala Papad', price: 75, accent: 'green' },
-      { id: 7, name: 'Green Salad', price: 60, accent: 'green' },
-      { id: 8, name: 'Grilled Paneer Sandwich', price: 155, accent: 'green' },
-      { id: 9, name: 'Hakka Noodles', price: 170, accent: 'green' },
-      { id: 10, name: 'Masala Dosa', price: 130, accent: 'green' },
-      { id: 11, name: 'Omlate (3 Eggs)', price: 110, accent: 'yellow' },
-      { id: 12, name: 'Open Item', price: 0, accent: 'green' },
-      { id: 13, name: 'Oreo Shake', price: 145, accent: 'green' },
-      { id: 14, name: 'Paneer Wrap', price: 165, accent: 'green' },
-      { id: 15, name: 'Raj Kachodi', price: 95, accent: 'green' },
-      { id: 16, name: 'RasMalai', price: 85, accent: 'green' },
-      { id: 17, name: 'Salted Lassi', price: 70, accent: 'green' },
-      { id: 18, name: 'Spl. Shahi Paneer', price: 240, accent: 'green' },
-      { id: 19, name: 'Spring Roll', price: 150, accent: 'green' },
-      { id: 20, name: 'Strawberry Mojito', price: 120, accent: 'green' },
-      { id: 21, name: 'Sweet Corn Soup', price: 115, accent: 'green' },
-      { id: 22, name: 'Tandoori Momos (8 Pcs)', price: 180, accent: 'green' },
-      { id: 23, name: 'Tandoori Pasta', price: 190, accent: 'green' },
-      { id: 24, name: 'Veg Burger', price: 95, accent: 'green' },
-      { id: 25, name: 'Water Bottle', price: 20, accent: 'green' },
-    ],
-  },
-  { id: 'favorites', name: 'Favorite Items', items: [] },
-  { id: 'beverages', name: 'Beverages', items: [] },
-  { id: 'burgers', name: 'Burgers', items: [] },
-  { id: 'egg', name: 'EGG', items: [] },
-  { id: 'chicken', name: 'Chicken', items: [] },
-  { id: 'chakna', name: 'Chakhna', items: [] },
-  { id: 'chinese-snacks', name: 'Chinese Snacks', items: [] },
-  { id: 'soup', name: 'Chinse Soups', items: [] },
-  { id: 'garlic-bread', name: 'Garlic Bread', items: [] },
-  { id: 'gravy', name: 'Gravy Items', items: [] },
-  { id: 'wraps', name: 'Hawaiian Wraps', items: [] },
-  { id: 'maggie', name: 'Maggie Lover', items: [] },
-]
+const menuItems = ref([])
+const menuItemsLoading = ref(false)
+const menuItemsError = ref('')
+
+const menuItemModalOpen = ref(false)
+const menuItemModalMode = ref('create')
+const menuItemSubmitting = ref(false)
+const menuItemFormError = ref('')
+const menuItemForm = reactive({
+  id: null,
+  name: '',
+  category: '',
+  short_code: '',
+  item_type: 'Veg',
+  price: 0,
+  is_available: true,
+})
 
 const orderTypes = ['Dine In', 'Delivery', 'Pick Up']
 const actionTabs = ['Table', 'Guest', 'Group', 'Notes', 'Order']
@@ -119,7 +91,7 @@ const deleteConfirmOpen = ref(false)
 const deleteSubmitting = ref(false)
 const deleteError = ref('')
 const deleteTargetTable = ref(null)
-const selectedCategoryId = ref(categories[0].id)
+const selectedCategoryId = ref('')
 const itemSearch = ref('')
 const shortCode = ref('')
 const selectedOrderType = ref('Dine In')
@@ -132,12 +104,46 @@ const flags = reactive({
   feedbackSms: true,
 })
 
-const activeCategory = computed(() => categories.find((category) => category.id === selectedCategoryId.value) ?? categories[0])
+const categories = computed(() => {
+  const categoryMap = new Map()
+
+  for (const item of menuItems.value) {
+    const categoryName = item.category?.trim() || 'Uncategorized'
+    const categoryId = categoryName.toLowerCase().replaceAll(' ', '-')
+
+    if (!categoryMap.has(categoryId)) {
+      categoryMap.set(categoryId, {
+        id: categoryId,
+        name: categoryName,
+        items: [],
+      })
+    }
+
+    categoryMap.get(categoryId).items.push(item)
+  }
+
+  return [...categoryMap.values()].sort((left, right) => left.name.localeCompare(right.name))
+})
+
+const activeCategory = computed(() => {
+  if (categories.value.length === 0) {
+    return { id: '', name: 'Menu', items: [] }
+  }
+
+  return categories.value.find((category) => category.id === selectedCategoryId.value) ?? categories.value[0]
+})
 
 const filteredItems = computed(() => {
   const query = itemSearch.value.trim().toLowerCase()
+  const codeQuery = shortCode.value.trim().toLowerCase()
+
   return activeCategory.value.items.filter((item) => {
-    const searchTarget = `${item.name} ${item.id}`.toLowerCase()
+    const searchTarget = `${item.name} ${item.id} ${item.short_code ?? ''}`.toLowerCase()
+
+    if (codeQuery && String(item.short_code ?? '').toLowerCase() !== codeQuery) {
+      return false
+    }
+
     return searchTarget.includes(query)
   })
 })
@@ -195,6 +201,165 @@ async function fetchTables() {
     sections.value = []
   } finally {
     tablesLoading.value = false
+  }
+}
+
+function mapMenuItem(menuItem) {
+  const accent = menuItem.item_type?.toLowerCase().includes('non') ? 'red' : 'green'
+
+  return {
+    ...menuItem,
+    accent,
+    price: Number(menuItem.price ?? 0),
+  }
+}
+
+async function fetchMenuItems() {
+  menuItemsLoading.value = true
+  menuItemsError.value = ''
+
+  try {
+    const response = await fetch('/api/menu-items')
+
+    if (!response.ok) {
+      throw new Error(`Unable to load menu items (${response.status})`)
+    }
+
+    const data = await response.json()
+    menuItems.value = data.map(mapMenuItem)
+
+    if (!selectedCategoryId.value && categories.value.length > 0) {
+      selectedCategoryId.value = categories.value[0].id
+    } else if (!categories.value.some((category) => category.id === selectedCategoryId.value)) {
+      selectedCategoryId.value = categories.value[0]?.id ?? ''
+    }
+  } catch (error) {
+    menuItemsError.value = error instanceof Error ? error.message : 'Failed to load menu items'
+    menuItems.value = []
+  } finally {
+    menuItemsLoading.value = false
+  }
+}
+
+function openCreateMenuItemModal() {
+  menuItemModalMode.value = 'create'
+  menuItemForm.id = null
+  menuItemForm.name = ''
+  menuItemForm.category = activeCategory.value?.name === 'Menu' ? '' : activeCategory.value?.name ?? ''
+  menuItemForm.short_code = ''
+  menuItemForm.item_type = 'Veg'
+  menuItemForm.price = 0
+  menuItemForm.is_available = true
+  menuItemFormError.value = ''
+  menuItemModalOpen.value = true
+}
+
+async function openEditMenuItemModal(menuItem) {
+  menuItemFormError.value = ''
+
+  try {
+    const response = await fetch(`/api/menu-items/${menuItem.id}`)
+
+    if (!response.ok) {
+      throw new Error(`Unable to load menu item (${response.status})`)
+    }
+
+    const fullItem = await response.json()
+
+    menuItemModalMode.value = 'edit'
+    menuItemForm.id = fullItem.id
+    menuItemForm.name = fullItem.name ?? ''
+    menuItemForm.category = fullItem.category ?? ''
+    menuItemForm.short_code = fullItem.short_code ?? ''
+    menuItemForm.item_type = fullItem.item_type ?? 'Veg'
+    menuItemForm.price = Number(fullItem.price ?? 0)
+    menuItemForm.is_available = Boolean(fullItem.is_available)
+    menuItemModalOpen.value = true
+  } catch (error) {
+    menuItemsError.value = error instanceof Error ? error.message : 'Failed to load menu item details'
+  }
+}
+
+function closeMenuItemModal() {
+  if (!menuItemSubmitting.value) {
+    menuItemModalOpen.value = false
+  }
+}
+
+async function submitMenuItem() {
+  const payload = {
+    name: menuItemForm.name.trim(),
+    category: menuItemForm.category.trim(),
+    short_code: menuItemForm.short_code.trim() || null,
+    item_type: menuItemForm.item_type,
+    price: Number(menuItemForm.price),
+    is_available: Boolean(menuItemForm.is_available),
+  }
+
+  if (!payload.name) {
+    menuItemFormError.value = 'Item name is required'
+    return
+  }
+
+  if (!payload.category) {
+    menuItemFormError.value = 'Category is required'
+    return
+  }
+
+  if (Number.isNaN(payload.price) || payload.price < 0) {
+    menuItemFormError.value = 'Price must be 0 or greater'
+    return
+  }
+
+  menuItemSubmitting.value = true
+  menuItemFormError.value = ''
+
+  try {
+    const isEdit = menuItemModalMode.value === 'edit' && menuItemForm.id
+    const url = isEdit ? `/api/menu-items/${menuItemForm.id}` : '/api/menu-items'
+    const method = isEdit ? 'PUT' : 'POST'
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      throw new Error(data?.message ?? `Unable to save menu item (${response.status})`)
+    }
+
+    menuItemModalOpen.value = false
+    await fetchMenuItems()
+  } catch (error) {
+    menuItemFormError.value = error instanceof Error ? error.message : 'Failed to save menu item'
+  } finally {
+    menuItemSubmitting.value = false
+  }
+}
+
+async function deleteMenuItem(menuItem) {
+  const confirmed = window.confirm(`Delete menu item ${menuItem.name}?`)
+
+  if (!confirmed) {
+    return
+  }
+
+  try {
+    const response = await fetch(`/api/menu-items/${menuItem.id}`, {
+      method: 'DELETE',
+    })
+
+    if (!response.ok) {
+      throw new Error(`Unable to delete menu item (${response.status})`)
+    }
+
+    await fetchMenuItems()
+  } catch (error) {
+    menuItemsError.value = error instanceof Error ? error.message : 'Failed to delete menu item'
   }
 }
 
@@ -373,6 +538,7 @@ async function confirmDelete() {
 
 onMounted(() => {
   fetchTables()
+  fetchMenuItems()
 })
 
 function iconPath(icon) {
@@ -491,6 +657,8 @@ function formatCurrency(value) {
       :item-search="itemSearch"
       :short-code="shortCode"
       :filtered-items="filteredItems"
+      :menu-items-loading="menuItemsLoading"
+      :menu-items-error="menuItemsError"
       :order-types="orderTypes"
       :selected-order-type="selectedOrderType"
       :action-tabs="actionTabs"
@@ -507,6 +675,9 @@ function formatCurrency(value) {
       @update:item-search="itemSearch = $event"
       @update:short-code="shortCode = $event"
       @add-item="addItem"
+      @add-menu-item="openCreateMenuItemModal"
+      @edit-menu-item="openEditMenuItemModal"
+      @delete-menu-item="deleteMenuItem"
       @update:selected-order-type="selectedOrderType = $event"
       @go-back="goBackToTables"
       @update-quantity="updateQuantity"
@@ -616,6 +787,54 @@ function formatCurrency(value) {
           <button type="button" class="dialog-button dialog-button--danger" :disabled="deleteSubmitting" @click="confirmDelete">{{ deleteSubmitting ? 'Deleting...' : 'Delete' }}</button>
         </div>
       </div>
+    </div>
+
+    <div v-if="menuItemModalOpen" class="dialog-backdrop" @click.self="closeMenuItemModal">
+      <form class="dialog-card" @submit.prevent="submitMenuItem">
+        <h3>{{ menuItemModalMode === 'edit' ? 'Edit Menu Item' : 'Add Menu Item' }}</h3>
+
+        <p v-if="menuItemFormError" class="dialog-error">{{ menuItemFormError }}</p>
+
+        <label class="dialog-field">
+          <span>Item Name</span>
+          <input v-model="menuItemForm.name" type="text" placeholder="Paneer Tikka" required />
+        </label>
+
+        <label class="dialog-field">
+          <span>Category</span>
+          <input v-model="menuItemForm.category" type="text" placeholder="Starters" required />
+        </label>
+
+        <label class="dialog-field">
+          <span>Short Code</span>
+          <input v-model="menuItemForm.short_code" type="text" placeholder="MI-101" />
+        </label>
+
+        <div class="dialog-grid-2">
+          <label class="dialog-field">
+            <span>Item Type</span>
+            <select v-model="menuItemForm.item_type">
+              <option value="Veg">Veg</option>
+              <option value="Non-Veg">Non-Veg</option>
+            </select>
+          </label>
+
+          <label class="dialog-field">
+            <span>Price</span>
+            <input v-model.number="menuItemForm.price" type="number" min="0" step="0.01" required />
+          </label>
+        </div>
+
+        <label class="check-flag">
+          <input v-model="menuItemForm.is_available" type="checkbox" />
+          <span>Available</span>
+        </label>
+
+        <div class="dialog-actions">
+          <button type="button" class="dialog-button dialog-button--ghost" @click="closeMenuItemModal">Cancel</button>
+          <button type="submit" class="dialog-button" :disabled="menuItemSubmitting">{{ menuItemSubmitting ? 'Saving...' : menuItemModalMode === 'edit' ? 'Update Item' : 'Create Item' }}</button>
+        </div>
+      </form>
     </div>
   </main>
 </template>

@@ -594,6 +594,40 @@ button {
     background: #ececec;
 }
 
+.menu-actions-row {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px 12px 0;
+}
+
+.menu-action-pill {
+    border: 0;
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-weight: 700;
+}
+
+.menu-action-pill--primary {
+    background: #df3b34;
+    color: #fff;
+}
+
+.menu-action-pill--icon {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 10px;
+}
+
+.menu-action-pill--icon svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
 .order-filters {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;
@@ -617,6 +651,13 @@ button {
     outline: 0;
 }
 
+.short-code-group {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+
 .item-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(120px, 1fr));
@@ -624,6 +665,68 @@ button {
     padding: 12px;
     align-content: start;
     overflow: auto;
+}
+
+.item-grid__status {
+    margin: 8px 12px 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #f4f4f4;
+    color: #5d5a57;
+    font-weight: 700;
+}
+
+.item-grid__status--error {
+    background: #fff0f0;
+    color: #d63030;
+}
+
+.menu-item-card-wrap {
+    position: relative;
+}
+
+.menu-item-actions {
+    display: none;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 2;
+    gap: 5px;
+}
+
+.menu-item-card-wrap:hover .menu-item-actions {
+    display: flex;
+}
+
+.menu-item-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.menu-item-icon-btn--edit {
+    background: #e8f4ff;
+    color: #1a7fd4;
+}
+
+.menu-item-icon-btn--delete {
+    background: #ffeaea;
+    color: #d63030;
+}
+
+.menu-item-icon-btn--edit:hover {
+    background: #1a7fd4;
+    color: #fff;
+}
+
+.menu-item-icon-btn--delete:hover {
+    background: #d63030;
+    color: #fff;
 }
 
 .menu-item-card {
@@ -857,6 +960,12 @@ button {
     align-items: center;
     gap: 8px;
     font-weight: 700;
+}
+
+.dialog-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
 }
 
 .check-flag input,

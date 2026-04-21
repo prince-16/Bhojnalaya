@@ -72,6 +72,14 @@ const props = defineProps({
     type: Function,
     required: true,
   },
+  menuItemsLoading: {
+    type: Boolean,
+    default: false,
+  },
+  menuItemsError: {
+    type: String,
+    default: '',
+  },
 })
 
 defineEmits([
@@ -79,6 +87,9 @@ defineEmits([
   'update:item-search',
   'update:short-code',
   'add-item',
+  'add-menu-item',
+  'edit-menu-item',
+  'delete-menu-item',
   'update:selected-order-type',
   'go-back',
   'update-quantity',
@@ -101,9 +112,14 @@ defineEmits([
       :short-code="props.shortCode"
       :filtered-items="props.filteredItems"
       :format-currency="props.formatCurrency"
+      :menu-items-loading="props.menuItemsLoading"
+      :menu-items-error="props.menuItemsError"
       @update:item-search="$emit('update:item-search', $event)"
       @update:short-code="$emit('update:short-code', $event)"
       @add-item="$emit('add-item', $event)"
+      @add-menu-item="$emit('add-menu-item')"
+      @edit-menu-item="$emit('edit-menu-item', $event)"
+      @delete-menu-item="$emit('delete-menu-item', $event)"
     />
 
     <OrderCartPanel
