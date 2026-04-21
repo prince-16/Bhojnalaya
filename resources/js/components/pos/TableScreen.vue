@@ -24,7 +24,7 @@ const props = defineProps({
   },
 })
 
-defineEmits(['open-table', 'refresh', 'quick-action'])
+defineEmits(['open-table', 'refresh', 'quick-action', 'edit-table', 'delete-table'])
 </script>
 
 <template>
@@ -80,15 +80,31 @@ defineEmits(['open-table', 'refresh', 'quick-action'])
       <h2>{{ section.title }}</h2>
 
       <div class="table-grid" :class="{ 'table-grid--hall': section.title === 'Party Hall' }">
-        <AppButton
+        <div
           v-for="table in section.tables"
           :key="table.id"
-          class="table-card"
-          :class="`table-card--${table.status}`"
-          @click="$emit('open-table', { table, sectionTitle: section.title })"
+          class="table-card-wrapper"
         >
-          <span>{{ table.label }}</span>
-        </AppButton>
+          <AppButton
+            class="table-card"
+            :class="`table-card--${table.status}`"
+            @click="$emit('open-table', { table, sectionTitle: section.title })"
+          >
+            <span>{{ table.label }}</span>
+          </AppButton>
+          <div class="table-card-actions">
+            <button class="table-action-btn table-action-btn--edit" title="Edit Table" @click.stop="$emit('edit-table', table)">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13" aria-hidden="true">
+                <path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" />
+              </svg>
+            </button>
+            <button class="table-action-btn table-action-btn--delete" title="Delete Table" @click.stop="$emit('delete-table', table)">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13" aria-hidden="true">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 0 0-.894.553L7.382 4H4a1 1 0 0 0 0 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a1 1 0 1 0 0-2h-3.382l-.724-1.447A1 1 0 0 0 11 2H9ZM7 8a1 1 0 0 1 2 0v6a1 1 0 1 1-2 0V8Zm5-1a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1Z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 

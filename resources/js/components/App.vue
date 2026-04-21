@@ -93,6 +93,32 @@ const newTableForm = reactive({
   capacity: 4,
   status: 'blank',
 })
+const selectedFloor = ref('');
+const customFloor = ref('');
+
+const uniqueFloors = computed(() => {
+  const floors = new Set();
+  sections.value.forEach(section => {
+    if (section.title && section.title !== 'Unassigned') {
+      floors.add(section.title);
+    }
+  });
+  return Array.from(floors);
+});
+
+// Edit table modal
+const editTableModalOpen = ref(false)
+const editTableSubmitting = ref(false)
+const editTableError = ref('')
+const editTableForm = reactive({ id: null, name: '', floor: '', capacity: 4, status: 'blank' })
+const editSelectedFloor = ref('')
+const editCustomFloor = ref('')
+
+// Delete confirm
+const deleteConfirmOpen = ref(false)
+const deleteSubmitting = ref(false)
+const deleteError = ref('')
+const deleteTargetTable = ref(null)
 const selectedCategoryId = ref(categories[0].id)
 const itemSearch = ref('')
 const shortCode = ref('')
@@ -177,6 +203,8 @@ function openAddTableModal() {
   newTableForm.floor = ''
   newTableForm.capacity = 4
   newTableForm.status = 'blank'
+  selectedFloor.value = ''
+  customFloor.value = ''
   tablesError.value = ''
   addTableModalOpen.value = true
 }
@@ -191,16 +219,23 @@ async function submitCreateTable() {
   const capacity = Number.parseInt(String(newTableForm.capacity), 10)
   const status = normalizeTableStatus(newTableForm.status)
   const name = newTableForm.name.trim()
+  let floor = ''
+  if (selectedFloor.value === 'other') {
+    floor = customFloor.value.trim()
+  } else {
+    floor = selectedFloor.value.trim()
+  }
 
   if (!name) {
     tablesError.value = 'Table name is required'
-
     return
   }
-
   if (!Number.isInteger(capacity) || capacity < 1) {
     tablesError.value = 'Capacity must be a positive integer'
-
+    return
+  }
+  if (!floor) {
+    tablesError.value = 'Floor is required'
     return
   }
 
@@ -215,7 +250,7 @@ async function submitCreateTable() {
       },
       body: JSON.stringify({
         name,
-        floor: newTableForm.floor.trim() || null,
+        floor: floor || null,
         capacity,
         status,
         is_active: true,
@@ -238,6 +273,101 @@ async function submitCreateTable() {
 function handleQuickAction(action) {
   if (action.label === '+ Add Table') {
     openAddTableModal()
+  }
+}
+
+function openEditTableModal(table) {
+  const apiTable = table.apiTable ?? table
+  editTableForm.id = apiTable.id
+  editTableForm.name = apiTable.name ?? table.label ?? ''
+  editTableForm.capacity = apiTable.capacity ?? 4
+  editTableForm.status = normalizeTableStatus(apiTable.status ?? table.status)
+  const floor = apiTable.floor?.trim() ?? ''
+  const existingFloors = uniqueFloors.value
+  if (floor && existingFloors.includes(floor)) {
+    editSelectedFloor.value = floor
+    editCustomFloor.value = ''
+  } else if (floor) {
+    editSelectedFloor.value = 'other'
+    editCustomFloor.value = floor
+  } else {
+    editSelectedFloor.value = ''
+    editCustomFloor.value = ''
+  }
+  editTableError.value = ''
+  editTableModalOpen.value = true
+}
+
+function closeEditTableModal() {
+  if (!editTableSubmitting.value) {
+    editTableModalOpen.value = false
+  }
+}
+
+async function submitEditTable() {
+  const name = editTableForm.name.trim()
+  const capacity = Number.parseInt(String(editTableForm.capacity), 10)
+  const status = normalizeTableStatus(editTableForm.status)
+  let floor = ''
+  if (editSelectedFloor.value === 'other') {
+    floor = editCustomFloor.value.trim()
+  } else {
+    floor = editSelectedFloor.value.trim()
+  }
+
+  if (!name) { editTableError.value = 'Table name is required'; return }
+  if (!Number.isInteger(capacity) || capacity < 1) { editTableError.value = 'Capacity must be a positive integer'; return }
+  if (!floor) { editTableError.value = 'Floor is required'; return }
+
+  editTableError.value = ''
+  editTableSubmitting.value = true
+
+  try {
+    const response = await fetch(`/api/tables/${editTableForm.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, floor: floor || null, capacity, status, is_active: true }),
+    })
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      throw new Error(data?.message ?? `Unable to update table (${response.status})`)
+    }
+    editTableModalOpen.value = false
+    await fetchTables()
+  } catch (error) {
+    editTableError.value = error instanceof Error ? error.message : 'Failed to update table'
+  } finally {
+    editTableSubmitting.value = false
+  }
+}
+
+function openDeleteConfirm(table) {
+  deleteTargetTable.value = table.apiTable ?? table
+  deleteError.value = ''
+  deleteConfirmOpen.value = true
+}
+
+function closeDeleteConfirm() {
+  if (!deleteSubmitting.value) {
+    deleteConfirmOpen.value = false
+    deleteTargetTable.value = null
+  }
+}
+
+async function confirmDelete() {
+  if (!deleteTargetTable.value) return
+  deleteSubmitting.value = true
+  deleteError.value = ''
+  try {
+    const response = await fetch(`/api/tables/${deleteTargetTable.value.id}`, { method: 'DELETE' })
+    if (!response.ok) throw new Error(`Unable to delete table (${response.status})`)
+    deleteConfirmOpen.value = false
+    deleteTargetTable.value = null
+    await fetchTables()
+  } catch (error) {
+    deleteError.value = error instanceof Error ? error.message : 'Failed to delete table'
+  } finally {
+    deleteSubmitting.value = false
   }
 }
 
@@ -350,6 +480,8 @@ function formatCurrency(value) {
       @open-table="openTable"
       @refresh="fetchTables"
       @quick-action="handleQuickAction"
+      @edit-table="openEditTableModal"
+      @delete-table="openDeleteConfirm"
     />
 
     <OrderScreen
@@ -393,7 +525,15 @@ function formatCurrency(value) {
 
         <label class="dialog-field">
           <span>Floor</span>
-          <input v-model="newTableForm.floor" type="text" placeholder="Ground Floor" />
+          <select v-model="selectedFloor">
+            <option value="" disabled>Select Floor</option>
+            <option v-for="floor in uniqueFloors" :key="floor" :value="floor">{{ floor }}</option>
+            <option value="other">Other (Enter new floor)</option>
+          </select>
+        </label>
+        <label v-if="selectedFloor === 'other'" class="dialog-field">
+          <span>New Floor</span>
+          <input v-model="customFloor" type="text" placeholder="Enter new floor name" />
         </label>
 
         <label class="dialog-field">
@@ -416,6 +556,66 @@ function formatCurrency(value) {
           <button type="submit" class="dialog-button" :disabled="addTableSubmitting">{{ addTableSubmitting ? 'Saving...' : 'Create Table' }}</button>
         </div>
       </form>
+    </div>
+
+    <!-- Edit Table Modal -->
+    <div v-if="editTableModalOpen" class="dialog-backdrop" @click.self="closeEditTableModal">
+      <form class="dialog-card" @submit.prevent="submitEditTable">
+        <h3>Edit Table</h3>
+
+        <p v-if="editTableError" class="dialog-error">{{ editTableError }}</p>
+
+        <label class="dialog-field">
+          <span>Table Name</span>
+          <input v-model="editTableForm.name" type="text" placeholder="T-21" required />
+        </label>
+
+        <label class="dialog-field">
+          <span>Floor</span>
+          <select v-model="editSelectedFloor">
+            <option value="" disabled>Select Floor</option>
+            <option v-for="floor in uniqueFloors" :key="floor" :value="floor">{{ floor }}</option>
+            <option value="other">Other (Enter new floor)</option>
+          </select>
+        </label>
+        <label v-if="editSelectedFloor === 'other'" class="dialog-field">
+          <span>New Floor</span>
+          <input v-model="editCustomFloor" type="text" placeholder="Enter new floor name" />
+        </label>
+
+        <label class="dialog-field">
+          <span>Capacity</span>
+          <input v-model.number="editTableForm.capacity" type="number" min="1" step="1" required />
+        </label>
+
+        <label class="dialog-field">
+          <span>Status</span>
+          <select v-model="editTableForm.status">
+            <option value="blank">Blank</option>
+            <option value="running">Running</option>
+            <option value="printed">Printed</option>
+            <option value="paid">Paid</option>
+          </select>
+        </label>
+
+        <div class="dialog-actions">
+          <button type="button" class="dialog-button dialog-button--ghost" @click="closeEditTableModal">Cancel</button>
+          <button type="submit" class="dialog-button" :disabled="editTableSubmitting">{{ editTableSubmitting ? 'Saving...' : 'Save Changes' }}</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div v-if="deleteConfirmOpen" class="dialog-backdrop" @click.self="closeDeleteConfirm">
+      <div class="dialog-card">
+        <h3>Delete Table</h3>
+        <p class="dialog-confirm-text">Are you sure you want to delete table <strong>{{ deleteTargetTable?.name }}</strong>? This action cannot be undone.</p>
+        <p v-if="deleteError" class="dialog-error">{{ deleteError }}</p>
+        <div class="dialog-actions">
+          <button type="button" class="dialog-button dialog-button--ghost" @click="closeDeleteConfirm">Cancel</button>
+          <button type="button" class="dialog-button dialog-button--danger" :disabled="deleteSubmitting" @click="confirmDelete">{{ deleteSubmitting ? 'Deleting...' : 'Delete' }}</button>
+        </div>
+      </div>
     </div>
   </main>
 </template>

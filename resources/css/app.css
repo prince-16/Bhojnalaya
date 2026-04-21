@@ -420,12 +420,93 @@ button {
     align-items: center;
     justify-content: center;
     min-height: 88px;
+    width: 100%;
     border-radius: 16px;
     border: 2px dashed var(--line-strong);
     background: linear-gradient(180deg, #fff 0%, #faf8f5 100%);
     color: #66615b;
     font-weight: 700;
     font-size: 1rem;
+}
+
+.table-card-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.table-card-actions {
+    display: none;
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    gap: 4px;
+    flex-direction: row;
+    z-index: 2;
+}
+
+.table-card-wrapper:hover .table-card-actions {
+    display: flex;
+}
+
+.table-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s;
+}
+
+.table-action-btn--edit {
+    background: #e8f4ff;
+    color: #1a7fd4;
+}
+
+.table-action-btn--edit:hover {
+    background: #1a7fd4;
+    color: #fff;
+}
+
+.table-action-btn--delete {
+    background: #ffeaea;
+    color: #d63030;
+}
+
+.table-action-btn--delete:hover {
+    background: #d63030;
+    color: #fff;
+}
+
+.dialog-button--danger {
+    background: #d63030;
+    color: #fff;
+    border-color: #d63030;
+}
+
+.dialog-button--danger:hover:not(:disabled) {
+    background: #b52424;
+    border-color: #b52424;
+}
+
+.dialog-error {
+    color: #d63030;
+    font-size: 0.85rem;
+    margin: -4px 0 6px;
+    padding: 6px 10px;
+    background: #fff0f0;
+    border-radius: 6px;
+    border-left: 3px solid #d63030;
+}
+
+.dialog-confirm-text {
+    color: var(--text);
+    font-size: 0.95rem;
+    margin-bottom: 8px;
 }
 
 .table-card--blank {
