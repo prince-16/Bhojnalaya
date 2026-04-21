@@ -1,34 +1,12 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import OrderScreen from './pos/OrderScreen.vue'
 import TableScreen from './pos/TableScreen.vue'
 import TopBar from './pos/TopBar.vue'
 
-const sections = [
-  {
-    title: 'Ground Floor',
-    tables: Array.from({ length: 10 }, (_, index) => ({
-      id: index + 1,
-      label: `${index + 1}`,
-      status: index === 2 ? 'running' : 'blank',
-    })),
-  },
-  {
-    title: 'Basement',
-    tables: Array.from({ length: 10 }, (_, index) => ({
-      id: index + 11,
-      label: `${index + 11}`,
-      status: index === 4 ? 'printed' : 'blank',
-    })),
-  },
-  {
-    title: 'Party Hall',
-    tables: [
-      { id: 21, label: 'Hall 1', status: 'blank' },
-      { id: 22, label: 'Hall 2', status: 'paid' },
-    ],
-  },
-]
+const sections = ref([])
+const tablesLoading = ref(false)
+const tablesError = ref('')
 
 const legendItems = [
   { label: 'Blank Table', color: '#eceff5' },
@@ -107,6 +85,14 @@ const paymentModes = ['Cash', 'Card', 'Due', 'Other', 'Part']
 
 const view = ref('tables')
 const selectedTable = ref(null)
+const addTableModalOpen = ref(false)
+const addTableSubmitting = ref(false)
+const newTableForm = reactive({
+  name: '',
+  floor: '',
+  capacity: 4,
+  status: 'blank',
+})
 const selectedCategoryId = ref(categories[0].id)
 const itemSearch = ref('')
 const shortCode = ref('')
@@ -131,6 +117,133 @@ const filteredItems = computed(() => {
 })
 
 const totalAmount = computed(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0))
+
+function normalizeTableStatus(status) {
+  const allowedStatuses = new Set(['blank', 'running', 'printed', 'paid'])
+  const normalized = String(status ?? '').trim().toLowerCase().replaceAll(' ', '-')
+
+  return allowedStatuses.has(normalized) ? normalized : 'blank'
+}
+
+function mapTablesToSections(tables) {
+  const sectionMap = new Map()
+
+  for (const table of tables) {
+    const floorTitle = table.floor?.trim() || 'Unassigned'
+
+    if (!sectionMap.has(floorTitle)) {
+      sectionMap.set(floorTitle, [])
+    }
+
+    sectionMap.get(floorTitle).push({
+      id: table.id,
+      label: table.name,
+      status: normalizeTableStatus(table.status),
+      apiTable: table,
+    })
+  }
+
+  return [...sectionMap.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([title, mappedTables]) => ({
+      title,
+      tables: mappedTables.sort((left, right) => left.label.localeCompare(right.label)),
+    }))
+}
+
+async function fetchTables() {
+  tablesLoading.value = true
+  tablesError.value = ''
+
+  try {
+    const response = await fetch('/api/tables')
+
+    if (!response.ok) {
+      throw new Error(`Unable to load tables (${response.status})`)
+    }
+
+    const tables = await response.json()
+    sections.value = mapTablesToSections(tables)
+  } catch (error) {
+    tablesError.value = error instanceof Error ? error.message : 'Failed to load tables'
+    sections.value = []
+  } finally {
+    tablesLoading.value = false
+  }
+}
+
+function openAddTableModal() {
+  newTableForm.name = ''
+  newTableForm.floor = ''
+  newTableForm.capacity = 4
+  newTableForm.status = 'blank'
+  tablesError.value = ''
+  addTableModalOpen.value = true
+}
+
+function closeAddTableModal() {
+  if (!addTableSubmitting.value) {
+    addTableModalOpen.value = false
+  }
+}
+
+async function submitCreateTable() {
+  const capacity = Number.parseInt(String(newTableForm.capacity), 10)
+  const status = normalizeTableStatus(newTableForm.status)
+  const name = newTableForm.name.trim()
+
+  if (!name) {
+    tablesError.value = 'Table name is required'
+
+    return
+  }
+
+  if (!Number.isInteger(capacity) || capacity < 1) {
+    tablesError.value = 'Capacity must be a positive integer'
+
+    return
+  }
+
+  tablesError.value = ''
+  addTableSubmitting.value = true
+
+  try {
+    const response = await fetch('/api/tables', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        floor: newTableForm.floor.trim() || null,
+        capacity,
+        status,
+        is_active: true,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Unable to create table (${response.status})`)
+    }
+
+    addTableModalOpen.value = false
+    await fetchTables()
+  } catch (error) {
+    tablesError.value = error instanceof Error ? error.message : 'Failed to create table'
+  } finally {
+    addTableSubmitting.value = false
+  }
+}
+
+function handleQuickAction(action) {
+  if (action.label === '+ Add Table') {
+    openAddTableModal()
+  }
+}
+
+onMounted(() => {
+  fetchTables()
+})
 
 function iconPath(icon) {
   switch (icon) {
@@ -166,7 +279,12 @@ function iconPath(icon) {
 }
 
 function openTable(payload) {
-  selectedTable.value = { ...payload.table, sectionTitle: payload.sectionTitle }
+  selectedTable.value = {
+    ...payload.table,
+    id: payload.table.apiTable?.id ?? payload.table.id,
+    sectionTitle: payload.sectionTitle,
+    apiTable: payload.table.apiTable ?? null,
+  }
   view.value = 'order'
 }
 
@@ -227,7 +345,11 @@ function formatCurrency(value) {
       :quick-actions="quickActions"
       :legend-items="legendItems"
       :sections="sections"
+      :loading="tablesLoading"
+      :error="tablesError"
       @open-table="openTable"
+      @refresh="fetchTables"
+      @quick-action="handleQuickAction"
     />
 
     <OrderScreen
@@ -259,5 +381,41 @@ function formatCurrency(value) {
       @toggle-flag="updateFlag"
       @update:selected-payment-mode="selectedPaymentMode = $event"
     />
+
+    <div v-if="addTableModalOpen" class="dialog-backdrop" @click.self="closeAddTableModal">
+      <form class="dialog-card" @submit.prevent="submitCreateTable">
+        <h3>Add New Table</h3>
+
+        <label class="dialog-field">
+          <span>Table Name</span>
+          <input v-model="newTableForm.name" type="text" placeholder="T-21" required />
+        </label>
+
+        <label class="dialog-field">
+          <span>Floor</span>
+          <input v-model="newTableForm.floor" type="text" placeholder="Ground Floor" />
+        </label>
+
+        <label class="dialog-field">
+          <span>Capacity</span>
+          <input v-model.number="newTableForm.capacity" type="number" min="1" step="1" required />
+        </label>
+
+        <label class="dialog-field">
+          <span>Status</span>
+          <select v-model="newTableForm.status">
+            <option value="blank">Blank</option>
+            <option value="running">Running</option>
+            <option value="printed">Printed</option>
+            <option value="paid">Paid</option>
+          </select>
+        </label>
+
+        <div class="dialog-actions">
+          <button type="button" class="dialog-button dialog-button--ghost" @click="closeAddTableModal">Cancel</button>
+          <button type="submit" class="dialog-button" :disabled="addTableSubmitting">{{ addTableSubmitting ? 'Saving...' : 'Create Table' }}</button>
+        </div>
+      </form>
+    </div>
   </main>
 </template>

@@ -54,6 +54,82 @@ button {
     min-height: 100vh;
 }
 
+.dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(36, 27, 22, 0.36);
+    backdrop-filter: blur(2px);
+}
+
+.dialog-card {
+    width: min(460px, 100%);
+    padding: 20px;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    background: #fff;
+    box-shadow: 0 16px 40px rgba(70, 54, 45, 0.22);
+}
+
+.dialog-card h3 {
+    margin: 0 0 14px;
+    color: #372f2a;
+    font-size: 1.2rem;
+}
+
+.dialog-field {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.dialog-field span {
+    font-size: 0.9rem;
+    color: #766d67;
+}
+
+.dialog-field input,
+.dialog-field select {
+    width: 100%;
+    height: 42px;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    padding: 0 12px;
+    background: #fff;
+    color: var(--text);
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.dialog-button {
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(180deg, #ea4b42 0%, var(--brand) 100%);
+}
+
+.dialog-button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.dialog-button--ghost {
+    border: 1px solid var(--line-strong);
+    background: #fff;
+    color: #6d655f;
+}
+
 .topbar {
     display: flex;
     align-items: center;

@@ -14,9 +14,17 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
+  error: {
+    type: String,
+    default: '',
+  },
 })
 
-defineEmits(['open-table'])
+defineEmits(['open-table', 'refresh', 'quick-action'])
 </script>
 
 <template>
@@ -27,17 +35,20 @@ defineEmits(['open-table'])
       </div>
 
       <div class="content-header__right">
-        <AppButton class="refresh-button" aria-label="Refresh tables">
+        <AppButton class="refresh-button" aria-label="Refresh tables" @click="$emit('refresh')">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1.75a.75.75 0 0 0-1.28-.53L7.97 3.97a.75.75 0 0 0 0 1.06l2.75 2.75A.75.75 0 0 0 12 7.25V5.5a6.5 6.5 0 1 1-6.37 7.8.75.75 0 0 0-1.46.34A8 8 0 1 0 17.65 6.35Z" />
           </svg>
         </AppButton>
 
-        <AppButton v-for="action in props.quickActions" :key="action.label" class="header-action" :class="{ 'header-action--solid': action.emphasized }">
+        <AppButton v-for="action in props.quickActions" :key="action.label" class="header-action" :class="{ 'header-action--solid': action.emphasized }" @click="$emit('quick-action', action)">
           {{ action.label }}
         </AppButton>
       </div>
     </div>
+
+    <p v-if="props.loading" class="eyebrow">Loading tables...</p>
+    <p v-else-if="props.error" class="eyebrow">{{ props.error }}</p>
 
     <div class="toolbar">
       <div class="toolbar__actions">
@@ -80,6 +91,8 @@ defineEmits(['open-table'])
         </AppButton>
       </div>
     </section>
+
+    <p v-if="!props.loading && !props.sections.length" class="eyebrow">No dining tables found. Use + Add Table to create one.</p>
 
     <div class="enquiry-banner">For Inquiry Call or WhatsApp : 9034142334</div>
   </section>
