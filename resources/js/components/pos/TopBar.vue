@@ -12,7 +12,7 @@ const props = defineProps({
   },
 })
 
-defineEmits(['new-order'])
+defineEmits(['new-order', 'menu-action', 'call-support'])
 </script>
 
 <template>
@@ -37,7 +37,7 @@ defineEmits(['new-order'])
     </div>
 
     <div class="topbar__actions">
-      <div class="support-card">
+      <button type="button" class="support-card support-card--button" @click="$emit('call-support')">
         <div class="support-card__icon">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1-.24c1.12.37 2.31.56 3.54.56a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.4 21 3 13.6 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.23.19 2.42.56 3.54a1 1 0 0 1-.24 1l-2.2 2.25Z" />
@@ -47,10 +47,17 @@ defineEmits(['new-order'])
           <p>Call For Support</p>
           <strong>9099912483</strong>
         </div>
-      </div>
+      </button>
 
       <nav class="menu-icons" aria-label="Main navigation">
-        <AppButton v-for="item in props.topMenu" :key="item.label" class="menu-icon-button" :aria-label="item.label" :data-tooltip="item.label">
+        <AppButton
+          v-for="item in props.topMenu"
+          :key="item.label"
+          class="menu-icon-button"
+          :aria-label="item.label"
+          :data-tooltip="item.label"
+          @click="$emit('menu-action', item)"
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path :d="props.iconPath(item.icon)" />
           </svg>

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { printBill58mm, printKot58mm } from '../print/thermalPrint'
 import OrderScreen from './pos/OrderScreen.vue'
 import TableScreen from './pos/TableScreen.vue'
 import TopBar from './pos/TopBar.vue'
@@ -33,6 +34,12 @@ const topMenu = [
   { label: 'Profile', icon: 'user' },
 ]
 
+const thermalPrintConfig = {
+  restaurantName: 'Bhojnalaya',
+  restaurantLine: 'Restaurant',
+  logoText: 'Bp',
+}
+
 const menuItems = ref([])
 const menuItemsLoading = ref(false)
 const menuItemsError = ref('')
@@ -60,10 +67,19 @@ const selectedTable = ref(null)
 const selectedTableDetails = ref(null)
 const currentOrderId = ref(null)
 const currentOrderNumber = ref('')
+const orderNotes = ref('')
 const orderSaveSubmitting = ref(false)
 const orderSaveMessage = ref('')
 const orderSaveError = ref('')
 const tableSwitcherOpen = ref(false)
+const runningOrdersOpen = ref(false)
+const runningOrdersLoading = ref(false)
+const runningOrdersError = ref('')
+const runningOrders = ref([])
+const orderNotesModalOpen = ref(false)
+const itemNotesModalOpen = ref(false)
+const itemNotesDraft = ref('')
+const selectedCartItemId = ref(null)
 let selectedTableDetailsRequestId = 0
 const addTableModalOpen = ref(false)
 const addTableSubmitting = ref(false)
@@ -176,6 +192,13 @@ const tableSwitcherOptions = computed(() => {
   return options
 })
 
+const activeRunningOrders = computed(() =>
+  runningOrders.value.filter((order) => {
+    const status = String(order?.status ?? '').toLowerCase()
+    return !['paid', 'cancelled', 'closed'].includes(status)
+  }),
+)
+
 function normalizeTableStatus(status) {
   const allowedStatuses = new Set(['blank', 'running', 'printed', 'paid'])
   const normalized = String(status ?? '').trim().toLowerCase().replaceAll(' ', '-')
@@ -212,6 +235,7 @@ function mapTablesToSections(tables) {
 function resetSelectedOrderState() {
   currentOrderId.value = null
   currentOrderNumber.value = ''
+  orderNotes.value = ''
   selectedTableDetails.value = null
   cart.splice(0, cart.length)
 }
@@ -236,6 +260,7 @@ function syncOrderStateFromTableDetails(tableDetails) {
 
   currentOrderId.value = activeOrder?.id ?? null
   currentOrderNumber.value = activeOrder?.order_number ?? ''
+  orderNotes.value = activeOrder?.notes ?? ''
 
   const nextCart = Array.isArray(activeOrder?.items)
     ? activeOrder.items.map((item) => ({
@@ -243,6 +268,7 @@ function syncOrderStateFromTableDetails(tableDetails) {
         name: item.menu_item?.name ?? `Item #${item.menu_item_id}`,
         price: Number(item.unit_price ?? 0),
         quantity: Number(item.quantity ?? 1),
+        notes: item.notes ?? '',
       }))
     : []
 
@@ -695,6 +721,98 @@ function goBackToTables() {
   view.value = 'tables'
 }
 
+function startNewOrder() {
+  orderSaveMessage.value = ''
+  orderSaveError.value = ''
+  resetSelectedOrderState()
+  selectedTable.value = null
+  tableSwitcherOpen.value = false
+  view.value = 'tables'
+}
+
+async function loadRunningOrders() {
+  runningOrdersLoading.value = true
+  runningOrdersError.value = ''
+
+  try {
+    const response = await fetch('/api/orders')
+
+    if (!response.ok) {
+      throw new Error(`Unable to load running orders (${response.status})`)
+    }
+
+    const orders = await response.json()
+    runningOrders.value = Array.isArray(orders)
+      ? orders.filter((order) => order?.table_id)
+      : []
+  } catch (error) {
+    runningOrdersError.value = error instanceof Error ? error.message : 'Failed to load running orders'
+    runningOrders.value = []
+  } finally {
+    runningOrdersLoading.value = false
+  }
+}
+
+async function openRunningOrders() {
+  runningOrdersOpen.value = true
+  await loadRunningOrders()
+}
+
+function closeRunningOrders() {
+  runningOrdersOpen.value = false
+}
+
+function findTableOptionById(tableId) {
+  return tableSwitcherOptions.value.find((table) => table.id === tableId) ?? null
+}
+
+async function openOrderFromRunningList(order) {
+  const tableId = order?.table_id
+
+  if (!tableId) {
+    return
+  }
+
+  const matchedTable = findTableOptionById(tableId)
+  selectedTable.value = {
+    id: tableId,
+    label: matchedTable?.label ?? order?.table?.name ?? `T-${tableId}`,
+    sectionTitle: matchedTable?.floor ?? order?.table?.floor ?? 'Unassigned',
+    status: matchedTable?.status ?? normalizeTableStatus(order?.table?.status),
+    apiTable: matchedTable?.apiTable ?? order?.table ?? null,
+  }
+
+  currentOrderId.value = order.id ?? null
+  currentOrderNumber.value = order.order_number ?? ''
+  orderSaveMessage.value = ''
+  orderSaveError.value = ''
+  runningOrdersOpen.value = false
+  view.value = 'order'
+
+  await fetchSelectedTableDetails(tableId)
+}
+
+function handleTopMenuAction(item) {
+  const action = String(item?.label ?? '').trim().toLowerCase()
+
+  if (action === 'orders') {
+    openRunningOrders()
+
+    return
+  }
+
+  if (action === 'tables') {
+    tableSwitcherOpen.value = false
+    view.value = 'tables'
+  }
+}
+
+function callSupport() {
+  if (typeof window !== 'undefined') {
+    window.location.href = 'tel:9099912483'
+  }
+}
+
 function openTableSwitcher() {
   tableSwitcherOpen.value = true
 }
@@ -725,6 +843,46 @@ function selectCategory(categoryId) {
   selectedCategoryId.value = categoryId
 }
 
+function openOrderNotesEditor() {
+  orderSaveMessage.value = ''
+  orderSaveError.value = ''
+  orderNotesModalOpen.value = true
+}
+
+function closeOrderNotesEditor() {
+  orderNotesModalOpen.value = false
+}
+
+function openItemNotesEditor(itemId) {
+  const cartItem = cart.find((item) => item.id === itemId)
+
+  if (!cartItem) {
+    return
+  }
+
+  selectedCartItemId.value = itemId
+  itemNotesDraft.value = cartItem.notes ?? ''
+  itemNotesModalOpen.value = true
+}
+
+function closeItemNotesEditor() {
+  itemNotesModalOpen.value = false
+  selectedCartItemId.value = null
+  itemNotesDraft.value = ''
+}
+
+function saveItemNotes() {
+  const cartItem = cart.find((item) => item.id === selectedCartItemId.value)
+
+  if (!cartItem) {
+    closeItemNotesEditor()
+    return
+  }
+
+  cartItem.notes = itemNotesDraft.value.trim()
+  closeItemNotesEditor()
+}
+
 function addItem(item) {
   orderSaveMessage.value = ''
   orderSaveError.value = ''
@@ -740,6 +898,7 @@ function addItem(item) {
     name: item.name,
     price: item.price,
     quantity: 1,
+    notes: '',
   })
 }
 
@@ -778,7 +937,107 @@ async function updateSelectedTableStatus(status) {
   })
 }
 
-async function saveOrder() {
+function resolveOrderStatusByAction(action) {
+  const normalizedAction = String(action ?? 'save').toLowerCase()
+
+  if (flags.paid) {
+    return 'paid'
+  }
+
+  switch (normalizedAction) {
+    case 'save_and_print':
+      return 'billed'
+    case 'save_and_ebill':
+      return 'ebilled'
+    case 'kot':
+      return 'kot_sent'
+    case 'kot_and_print':
+      return 'kot_printed'
+    default:
+      return 'open'
+  }
+}
+
+function resolveTableStatusByOrderStatus(orderStatus) {
+  if (orderStatus === 'paid') {
+    return 'paid'
+  }
+
+  return 'running'
+}
+
+function resolveSaveMessageByAction(action) {
+  const normalizedAction = String(action ?? 'save').toLowerCase()
+
+  switch (normalizedAction) {
+    case 'save_and_print':
+      return 'Order saved and print triggered'
+    case 'save_and_ebill':
+      return 'Order saved and eBill generated'
+    case 'kot':
+      return 'KOT sent to kitchen'
+    case 'kot_and_print':
+      return 'KOT sent to kitchen and print triggered'
+    default:
+      return 'Order saved successfully'
+  }
+}
+
+function runClientSidePostSaveAction(action) {
+  const normalizedAction = String(action ?? 'save').toLowerCase()
+
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const activeOrder = getActiveOrderFromTableDetails(selectedTableDetails.value)
+  const printableItems = Array.isArray(activeOrder?.items) && activeOrder.items.length
+    ? activeOrder.items.map((item) => ({
+        name: item.menu_item?.name ?? `Item #${item.menu_item_id}`,
+        quantity: Number(item.quantity ?? 1),
+        unitPrice: Number(item.unit_price ?? 0),
+        lineTotal: Number(item.line_total ?? 0),
+        notes: item.notes ?? '',
+      }))
+    : cart.map((item) => ({
+        name: item.name,
+        quantity: Number(item.quantity ?? 1),
+        unitPrice: Number(item.price ?? 0),
+        lineTotal: Number(item.price ?? 0) * Number(item.quantity ?? 1),
+        notes: '',
+      }))
+
+  const printPayload = {
+    ...thermalPrintConfig,
+    orderNumber: currentOrderNumber.value || activeOrder?.order_number || 'NA',
+    tableLabel: selectedTable.value?.label || selectedTableDetails.value?.name || 'Table',
+    floorLabel: selectedTableDetails.value?.floor || selectedTable.value?.sectionTitle || 'Unassigned',
+    orderType: activeOrder?.order_type || selectedOrderType.value,
+    printedAt: new Date(),
+    items: printableItems,
+    notes: activeOrder?.notes || orderNotes.value || '',
+    subtotal: Number(activeOrder?.subtotal ?? totalAmount.value),
+    taxAmount: Number(activeOrder?.tax_amount ?? 0),
+    grandTotal: Number(activeOrder?.total ?? totalAmount.value),
+  }
+
+  if (normalizedAction === 'save_and_print') {
+    printBill58mm(printPayload)
+    return
+  }
+
+  if (normalizedAction === 'save_and_ebill') {
+    // Placeholder digital billing action until SMS/WhatsApp/email integration is added.
+    window.alert('eBill has been generated for this order.')
+    return
+  }
+
+  if (normalizedAction === 'kot_and_print') {
+    printKot58mm(printPayload)
+  }
+}
+
+async function saveOrder(action = 'save') {
   if (!selectedTable.value?.id) {
     orderSaveError.value = 'Select a table first'
     orderSaveMessage.value = ''
@@ -797,7 +1056,7 @@ async function saveOrder() {
 
   const orderId = currentOrderId.value
   const orderNumber = currentOrderNumber.value || generateOrderNumber()
-  const orderStatus = flags.paid ? 'paid' : 'open'
+  const orderStatus = resolveOrderStatusByAction(action)
   const payload = {
     table_id: selectedTable.value.id,
     order_number: orderNumber,
@@ -807,7 +1066,9 @@ async function saveOrder() {
     items: cart.map((item) => ({
       menu_item_id: item.id,
       quantity: item.quantity,
+      notes: item.notes || null,
     })),
+    notes: orderNotes.value || null,
   }
 
   try {
@@ -829,7 +1090,7 @@ async function saveOrder() {
     currentOrderNumber.value = savedOrder.order_number
 
     try {
-      await updateSelectedTableStatus(orderStatus === 'paid' ? 'paid' : 'running')
+      await updateSelectedTableStatus(resolveTableStatusByOrderStatus(orderStatus))
     } catch {
       // Ignore table status refresh failures; order save is the primary action.
     }
@@ -839,7 +1100,8 @@ async function saveOrder() {
       fetchTables(),
     ])
 
-    orderSaveMessage.value = 'Order saved successfully'
+    runClientSidePostSaveAction(action)
+    orderSaveMessage.value = resolveSaveMessageByAction(action)
   } catch (error) {
     orderSaveError.value = error instanceof Error ? error.message : 'Failed to save order'
   } finally {
@@ -854,7 +1116,13 @@ function formatCurrency(value) {
 
 <template>
   <main class="petpooja-screen">
-    <TopBar :top-menu="topMenu" :icon-path="iconPath" @new-order="goBackToTables" />
+    <TopBar
+      :top-menu="topMenu"
+      :icon-path="iconPath"
+      @new-order="startNewOrder"
+      @menu-action="handleTopMenuAction"
+      @call-support="callSupport"
+    />
 
     <TableScreen
       v-if="view === 'tables'"
@@ -905,6 +1173,8 @@ function formatCurrency(value) {
       @update:selected-order-type="selectedOrderType = $event"
       @go-back="goBackToTables"
       @open-table-switcher="openTableSwitcher"
+      @open-order-notes="openOrderNotesEditor"
+      @open-item-notes="openItemNotesEditor"
       @save-order="saveOrder"
       @update-quantity="updateQuantity"
       @toggle-flag="updateFlag"
@@ -935,6 +1205,64 @@ function formatCurrency(value) {
           <button type="button" class="dialog-button dialog-button--ghost" @click="closeTableSwitcher">Close</button>
         </div>
       </div>
+    </div>
+
+    <div v-if="runningOrdersOpen" class="dialog-backdrop" @click.self="closeRunningOrders">
+      <div class="dialog-card">
+        <h3>Running Orders</h3>
+
+        <p v-if="runningOrdersLoading" class="dialog-confirm-text">Loading running orders...</p>
+        <p v-else-if="runningOrdersError" class="dialog-error">{{ runningOrdersError }}</p>
+        <p v-else-if="!activeRunningOrders.length" class="dialog-confirm-text">No running orders found.</p>
+
+        <div v-else class="table-switch-list">
+          <button
+            v-for="order in activeRunningOrders"
+            :key="order.id"
+            type="button"
+            class="table-switch-option"
+            @click="openOrderFromRunningList(order)"
+          >
+            <div>
+              <strong>{{ order.order_number || `Order #${order.id}` }}</strong>
+              <span>{{ order.table?.name || `Table ${order.table_id}` }} · {{ order.table?.floor || 'Unassigned' }}</span>
+            </div>
+            <span>{{ order.order_type || 'Dine In' }}</span>
+          </button>
+        </div>
+
+        <div class="dialog-actions">
+          <button type="button" class="dialog-button dialog-button--ghost" @click="closeRunningOrders">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="orderNotesModalOpen" class="dialog-backdrop" @click.self="closeOrderNotesEditor">
+      <form class="dialog-card" @submit.prevent="closeOrderNotesEditor">
+        <h3>Order Notes</h3>
+        <label class="dialog-field">
+          <span>Add kitchen note for this order</span>
+          <textarea v-model="orderNotes" class="dialog-textarea" rows="5" placeholder="Example: Serve together, less spicy, no onion in whole order"></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button type="button" class="dialog-button dialog-button--ghost" @click="closeOrderNotesEditor">Close</button>
+          <button type="submit" class="dialog-button">Done</button>
+        </div>
+      </form>
+    </div>
+
+    <div v-if="itemNotesModalOpen" class="dialog-backdrop" @click.self="closeItemNotesEditor">
+      <form class="dialog-card" @submit.prevent="saveItemNotes">
+        <h3>Dish Notes</h3>
+        <label class="dialog-field">
+          <span>Add kitchen note for this item</span>
+          <textarea v-model="itemNotesDraft" class="dialog-textarea" rows="5" placeholder="Example: Extra spicy, no garlic, less oil"></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button type="button" class="dialog-button dialog-button--ghost" @click="closeItemNotesEditor">Cancel</button>
+          <button type="submit" class="dialog-button">Save Note</button>
+        </div>
+      </form>
     </div>
 
     <div v-if="addTableModalOpen" class="dialog-backdrop" @click.self="closeAddTableModal">

@@ -84,6 +84,8 @@ defineEmits([
   'update:selected-order-type',
   'go-back',
   'open-table-switcher',
+  'open-order-notes',
+  'open-item-notes',
   'save-order',
   'update-quantity',
   'toggle-flag',
@@ -107,7 +109,12 @@ defineEmits([
 
     <div class="cart-top-meta">
       <div class="action-strip">
-        <AppButton v-for="tab in props.actionTabs" :key="tab" class="action-strip__button" @click="tab === 'Table' ? $emit('open-table-switcher') : null">
+        <AppButton
+          v-for="tab in props.actionTabs"
+          :key="tab"
+          class="action-strip__button"
+          @click="tab === 'Table' ? $emit('open-table-switcher') : tab === 'Notes' ? $emit('open-order-notes') : null"
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path :d="props.iconPath(tab === 'Table' ? 'fork' : tab === 'Guest' ? 'guest' : tab === 'Group' ? 'group' : tab === 'Notes' ? 'note' : 'order')" />
           </svg>
@@ -136,18 +143,19 @@ defineEmits([
     </div>
 
     <div v-else class="cart-items">
-      <article v-for="item in props.cart" :key="item.id" class="cart-item">
+      <article v-for="item in props.cart" :key="item.id" class="cart-item cart-item--clickable" @click="$emit('open-item-notes', item.id)">
         <div>
           <strong>{{ item.name }}</strong>
           <p>Selected from {{ props.activeCategory.name }}</p>
+          <p v-if="item.notes" class="cart-item__note">Note: {{ item.notes }}</p>
         </div>
         <label class="cart-check">
-          <input type="checkbox" />
+          <input type="checkbox" @click.stop />
         </label>
         <div class="quantity-stepper">
-          <AppButton @click="$emit('update-quantity', { itemId: item.id, delta: -1 })">-</AppButton>
+          <AppButton @click.stop="$emit('update-quantity', { itemId: item.id, delta: -1 })">-</AppButton>
           <span>{{ item.quantity }}</span>
-          <AppButton @click="$emit('update-quantity', { itemId: item.id, delta: 1 })">+</AppButton>
+          <AppButton @click.stop="$emit('update-quantity', { itemId: item.id, delta: 1 })">+</AppButton>
         </div>
         <strong>{{ props.formatCurrency(item.price * item.quantity) }}</strong>
       </article>
@@ -199,11 +207,11 @@ defineEmits([
       <p v-else-if="props.orderSaveMessage" class="cart-save-feedback">{{ props.orderSaveMessage }}</p>
 
       <div class="bottom-actions">
-        <AppButton class="bottom-actions__primary" :disabled="props.orderSaveSubmitting" @click="$emit('save-order')">{{ props.orderSaveSubmitting ? 'Saving...' : 'Save' }}</AppButton>
-        <AppButton class="bottom-actions__primary">Save & Print</AppButton>
-        <AppButton class="bottom-actions__primary">Save & Bill</AppButton>
-        <AppButton class="bottom-actions__dark">KOT</AppButton>
-        <AppButton class="bottom-actions__dark">KOT & Print</AppButton>
+        <AppButton class="bottom-actions__primary" :disabled="props.orderSaveSubmitting" @click="$emit('save-order', 'save')">{{ props.orderSaveSubmitting ? 'Saving...' : 'Save' }}</AppButton>
+        <AppButton class="bottom-actions__primary" :disabled="props.orderSaveSubmitting" @click="$emit('save-order', 'save_and_print')">Save & Print</AppButton>
+        <AppButton class="bottom-actions__primary" :disabled="props.orderSaveSubmitting" @click="$emit('save-order', 'save_and_ebill')">Save & eBill</AppButton>
+        <AppButton class="bottom-actions__dark" :disabled="props.orderSaveSubmitting" @click="$emit('save-order', 'kot')">KOT</AppButton>
+        <AppButton class="bottom-actions__dark" :disabled="props.orderSaveSubmitting" @click="$emit('save-order', 'kot_and_print')">KOT & Print</AppButton>
         <AppButton class="bottom-actions__ghost">Hold</AppButton>
       </div>
     </div>

@@ -109,6 +109,8 @@ defineEmits([
   'update:selected-order-type',
   'go-back',
   'open-table-switcher',
+  'open-order-notes',
+  'open-item-notes',
   'save-order',
   'update-quantity',
   'toggle-flag',
@@ -160,7 +162,9 @@ defineEmits([
       @update:selected-order-type="$emit('update:selected-order-type', $event)"
       @go-back="$emit('go-back')"
       @open-table-switcher="$emit('open-table-switcher')"
-      @save-order="$emit('save-order')"
+      @open-order-notes="$emit('open-order-notes')"
+      @open-item-notes="$emit('open-item-notes', $event)"
+      @save-order="$emit('save-order', $event)"
       @update-quantity="$emit('update-quantity', $event)"
       @toggle-flag="$emit('toggle-flag', $event)"
       @update:selected-payment-mode="$emit('update:selected-payment-mode', $event)"
