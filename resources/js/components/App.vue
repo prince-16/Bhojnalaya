@@ -57,6 +57,14 @@ const paymentModes = ['Cash', 'Card', 'Due', 'Other', 'Part']
 
 const view = ref('tables')
 const selectedTable = ref(null)
+const selectedTableDetails = ref(null)
+const currentOrderId = ref(null)
+const currentOrderNumber = ref('')
+const orderSaveSubmitting = ref(false)
+const orderSaveMessage = ref('')
+const orderSaveError = ref('')
+const tableSwitcherOpen = ref(false)
+let selectedTableDetailsRequestId = 0
 const addTableModalOpen = ref(false)
 const addTableSubmitting = ref(false)
 const newTableForm = reactive({
@@ -150,6 +158,24 @@ const filteredItems = computed(() => {
 
 const totalAmount = computed(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0))
 
+const tableSwitcherOptions = computed(() => {
+  const options = []
+
+  for (const section of sections.value) {
+    for (const table of section.tables ?? []) {
+      options.push({
+        id: table.id,
+        label: table.label,
+        floor: section.title,
+        status: table.status,
+        apiTable: table.apiTable ?? null,
+      })
+    }
+  }
+
+  return options
+})
+
 function normalizeTableStatus(status) {
   const allowedStatuses = new Set(['blank', 'running', 'printed', 'paid'])
   const normalized = String(status ?? '').trim().toLowerCase().replaceAll(' ', '-')
@@ -181,6 +207,53 @@ function mapTablesToSections(tables) {
       title,
       tables: mappedTables.sort((left, right) => left.label.localeCompare(right.label)),
     }))
+}
+
+function resetSelectedOrderState() {
+  currentOrderId.value = null
+  currentOrderNumber.value = ''
+  selectedTableDetails.value = null
+  cart.splice(0, cart.length)
+}
+
+function getActiveOrderFromTableDetails(tableDetails) {
+  if (!Array.isArray(tableDetails?.orders)) {
+    return null
+  }
+
+  return [...tableDetails.orders]
+    .filter((order) => !['paid', 'cancelled', 'closed'].includes(String(order.status ?? '').toLowerCase()))
+    .sort((left, right) => {
+      const leftTime = new Date(left.updated_at ?? left.created_at ?? 0).getTime()
+      const rightTime = new Date(right.updated_at ?? right.created_at ?? 0).getTime()
+
+      return rightTime - leftTime
+    })[0] ?? null
+}
+
+function syncOrderStateFromTableDetails(tableDetails) {
+  const activeOrder = getActiveOrderFromTableDetails(tableDetails)
+
+  currentOrderId.value = activeOrder?.id ?? null
+  currentOrderNumber.value = activeOrder?.order_number ?? ''
+
+  const nextCart = Array.isArray(activeOrder?.items)
+    ? activeOrder.items.map((item) => ({
+        id: item.menu_item_id,
+        name: item.menu_item?.name ?? `Item #${item.menu_item_id}`,
+        price: Number(item.unit_price ?? 0),
+        quantity: Number(item.quantity ?? 1),
+      }))
+    : []
+
+  cart.splice(0, cart.length, ...nextCart)
+}
+
+function generateOrderNumber() {
+  const timestamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14)
+  const suffix = Math.floor(Math.random() * 900 + 100)
+
+  return `ORD-${timestamp}-${suffix}`
 }
 
 async function fetchTables() {
@@ -575,17 +648,77 @@ function iconPath(icon) {
 }
 
 function openTable(payload) {
+  resetSelectedOrderState()
+  orderSaveMessage.value = ''
+  orderSaveError.value = ''
   selectedTable.value = {
     ...payload.table,
     id: payload.table.apiTable?.id ?? payload.table.id,
     sectionTitle: payload.sectionTitle,
     apiTable: payload.table.apiTable ?? null,
   }
+
+  fetchSelectedTableDetails(selectedTable.value.id)
   view.value = 'order'
+}
+
+async function fetchSelectedTableDetails(tableId) {
+  if (!tableId) {
+    selectedTableDetails.value = null
+    return
+  }
+
+  selectedTableDetailsRequestId += 1
+  const requestId = selectedTableDetailsRequestId
+
+  try {
+    const response = await fetch(`/api/tables/${tableId}`)
+
+    if (!response.ok) {
+      throw new Error(`Unable to load table details (${response.status})`)
+    }
+
+    const table = await response.json()
+
+    if (requestId === selectedTableDetailsRequestId) {
+      selectedTableDetails.value = table
+      syncOrderStateFromTableDetails(table)
+    }
+  } catch (error) {
+    if (requestId === selectedTableDetailsRequestId) {
+      selectedTableDetails.value = null
+    }
+  }
 }
 
 function goBackToTables() {
   view.value = 'tables'
+}
+
+function openTableSwitcher() {
+  tableSwitcherOpen.value = true
+}
+
+function closeTableSwitcher() {
+  tableSwitcherOpen.value = false
+}
+
+async function switchOrderTable(table) {
+  if (!table?.id) {
+    return
+  }
+
+  resetSelectedOrderState()
+  orderSaveMessage.value = ''
+  orderSaveError.value = ''
+  selectedTable.value = {
+    ...table,
+    sectionTitle: table.floor,
+    apiTable: table.apiTable ?? null,
+  }
+
+  await fetchSelectedTableDetails(table.id)
+  tableSwitcherOpen.value = false
 }
 
 function selectCategory(categoryId) {
@@ -593,6 +726,8 @@ function selectCategory(categoryId) {
 }
 
 function addItem(item) {
+  orderSaveMessage.value = ''
+  orderSaveError.value = ''
   const existingItem = cart.find((cartItem) => cartItem.id === item.id)
 
   if (existingItem) {
@@ -609,6 +744,8 @@ function addItem(item) {
 }
 
 function updateQuantity(payload) {
+  orderSaveMessage.value = ''
+  orderSaveError.value = ''
   const cartItem = cart.find((item) => item.id === payload.itemId)
 
   if (!cartItem) {
@@ -625,6 +762,89 @@ function updateQuantity(payload) {
 
 function updateFlag(payload) {
   flags[payload.key] = payload.value
+}
+
+async function updateSelectedTableStatus(status) {
+  if (!selectedTable.value?.id) {
+    return
+  }
+
+  await fetch(`/api/tables/${selectedTable.value.id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status }),
+  })
+}
+
+async function saveOrder() {
+  if (!selectedTable.value?.id) {
+    orderSaveError.value = 'Select a table first'
+    orderSaveMessage.value = ''
+    return
+  }
+
+  if (!cart.length) {
+    orderSaveError.value = 'Add at least one item before saving'
+    orderSaveMessage.value = ''
+    return
+  }
+
+  orderSaveSubmitting.value = true
+  orderSaveError.value = ''
+  orderSaveMessage.value = ''
+
+  const orderId = currentOrderId.value
+  const orderNumber = currentOrderNumber.value || generateOrderNumber()
+  const orderStatus = flags.paid ? 'paid' : 'open'
+  const payload = {
+    table_id: selectedTable.value.id,
+    order_number: orderNumber,
+    order_type: selectedOrderType.value,
+    status: orderStatus,
+    tax_amount: 0,
+    items: cart.map((item) => ({
+      menu_item_id: item.id,
+      quantity: item.quantity,
+    })),
+  }
+
+  try {
+    const response = await fetch(orderId ? `/api/orders/${orderId}` : '/api/orders', {
+      method: orderId ? 'PUT' : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      throw new Error(data?.message ?? `Unable to save order (${response.status})`)
+    }
+
+    const savedOrder = await response.json()
+    currentOrderId.value = savedOrder.id
+    currentOrderNumber.value = savedOrder.order_number
+
+    try {
+      await updateSelectedTableStatus(orderStatus === 'paid' ? 'paid' : 'running')
+    } catch {
+      // Ignore table status refresh failures; order save is the primary action.
+    }
+
+    await Promise.all([
+      fetchSelectedTableDetails(selectedTable.value.id),
+      fetchTables(),
+    ])
+
+    orderSaveMessage.value = 'Order saved successfully'
+  } catch (error) {
+    orderSaveError.value = error instanceof Error ? error.message : 'Failed to save order'
+  } finally {
+    orderSaveSubmitting.value = false
+  }
 }
 
 function formatCurrency(value) {
@@ -663,6 +883,10 @@ function formatCurrency(value) {
       :selected-order-type="selectedOrderType"
       :action-tabs="actionTabs"
       :selected-table="selectedTable"
+      :table-details="selectedTableDetails"
+      :order-save-submitting="orderSaveSubmitting"
+      :order-save-message="orderSaveMessage"
+      :order-save-error="orderSaveError"
       :cart="cart"
       :active-category="activeCategory"
       :flags="flags"
@@ -680,10 +904,38 @@ function formatCurrency(value) {
       @delete-menu-item="deleteMenuItem"
       @update:selected-order-type="selectedOrderType = $event"
       @go-back="goBackToTables"
+      @open-table-switcher="openTableSwitcher"
+      @save-order="saveOrder"
       @update-quantity="updateQuantity"
       @toggle-flag="updateFlag"
       @update:selected-payment-mode="selectedPaymentMode = $event"
     />
+
+    <div v-if="tableSwitcherOpen" class="dialog-backdrop" @click.self="closeTableSwitcher">
+      <div class="dialog-card">
+        <h3>Switch Table</h3>
+
+        <p v-if="!tableSwitcherOptions.length" class="dialog-confirm-text">No tables found.</p>
+
+        <div v-else class="table-switch-list">
+          <button
+            v-for="table in tableSwitcherOptions"
+            :key="table.id"
+            type="button"
+            class="table-switch-option"
+            :class="{ 'table-switch-option--active': table.id === selectedTable?.id }"
+            @click="switchOrderTable(table)"
+          >
+            <strong>{{ table.label }}</strong>
+            <span>{{ table.floor }}</span>
+          </button>
+        </div>
+
+        <div class="dialog-actions">
+          <button type="button" class="dialog-button dialog-button--ghost" @click="closeTableSwitcher">Close</button>
+        </div>
+      </div>
+    </div>
 
     <div v-if="addTableModalOpen" class="dialog-backdrop" @click.self="closeAddTableModal">
       <form class="dialog-card" @submit.prevent="submitCreateTable">

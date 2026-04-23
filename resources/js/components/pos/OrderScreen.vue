@@ -40,6 +40,22 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  tableDetails: {
+    type: Object,
+    default: null,
+  },
+  orderSaveSubmitting: {
+    type: Boolean,
+    default: false,
+  },
+  orderSaveMessage: {
+    type: String,
+    default: '',
+  },
+  orderSaveError: {
+    type: String,
+    default: '',
+  },
   cart: {
     type: Array,
     required: true,
@@ -92,6 +108,8 @@ defineEmits([
   'delete-menu-item',
   'update:selected-order-type',
   'go-back',
+  'open-table-switcher',
+  'save-order',
   'update-quantity',
   'toggle-flag',
   'update:selected-payment-mode',
@@ -128,6 +146,10 @@ defineEmits([
       :action-tabs="props.actionTabs"
       :icon-path="props.iconPath"
       :selected-table="props.selectedTable"
+      :table-details="props.tableDetails"
+      :order-save-submitting="props.orderSaveSubmitting"
+      :order-save-message="props.orderSaveMessage"
+      :order-save-error="props.orderSaveError"
       :cart="props.cart"
       :active-category="props.activeCategory"
       :format-currency="props.formatCurrency"
@@ -137,6 +159,8 @@ defineEmits([
       :selected-payment-mode="props.selectedPaymentMode"
       @update:selected-order-type="$emit('update:selected-order-type', $event)"
       @go-back="$emit('go-back')"
+      @open-table-switcher="$emit('open-table-switcher')"
+      @save-order="$emit('save-order')"
       @update-quantity="$emit('update-quantity', $event)"
       @toggle-flag="$emit('toggle-flag', $event)"
       @update:selected-payment-mode="$emit('update:selected-payment-mode', $event)"

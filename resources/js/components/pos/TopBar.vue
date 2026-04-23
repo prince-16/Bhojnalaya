@@ -50,14 +50,14 @@ defineEmits(['new-order'])
       </div>
 
       <nav class="menu-icons" aria-label="Main navigation">
-        <AppButton v-for="item in props.topMenu" :key="item.label" class="menu-icon-button" :aria-label="item.label">
+        <AppButton v-for="item in props.topMenu" :key="item.label" class="menu-icon-button" :aria-label="item.label" :data-tooltip="item.label">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path :d="props.iconPath(item.icon)" />
           </svg>
         </AppButton>
       </nav>
 
-      <AppButton class="menu-icon-button power-button" aria-label="Logout">
+      <AppButton class="menu-icon-button power-button" aria-label="Logout" data-tooltip="Logout">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3.75a.75.75 0 0 1 .75.75v6.69a.75.75 0 0 1-1.5 0V4.5a.75.75 0 0 1 .75-.75Zm4.62 2.52a.75.75 0 0 1 1.06.04 8 8 0 1 1-11.36 0 .75.75 0 1 1 1.1 1.02 6.5 6.5 0 1 0 9.22 0 .75.75 0 0 1-.02-1.06Z" />
         </svg>

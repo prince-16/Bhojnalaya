@@ -298,6 +298,33 @@ button {
     height: 44px;
 }
 
+.menu-icon-button[data-tooltip] {
+    position: relative;
+}
+
+.menu-icon-button[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 50%;
+    bottom: -30px;
+    transform: translateX(-50%);
+    background: rgba(54, 48, 43, 0.94);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 3;
+}
+
+.menu-icon-button[data-tooltip]:hover::after {
+    opacity: 1;
+}
+
 .power-button {
     color: #55504b;
 }
@@ -509,6 +536,44 @@ button {
     margin-bottom: 8px;
 }
 
+.table-switch-list {
+    display: grid;
+    gap: 8px;
+    max-height: 320px;
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.table-switch-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    text-align: left;
+    color: var(--text);
+}
+
+.table-switch-option strong {
+    font-size: 0.95rem;
+}
+
+.table-switch-option span {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.table-switch-option:hover {
+    border-color: rgba(223, 59, 52, 0.4);
+}
+
+.table-switch-option--active {
+    border-color: var(--brand);
+    background: rgba(223, 59, 52, 0.06);
+}
+
 .table-card--blank {
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
 }
@@ -683,13 +748,14 @@ button {
 
 .menu-item-card-wrap {
     position: relative;
+    min-width: 0;
 }
 
 .menu-item-actions {
     display: none;
     position: absolute;
-    top: 6px;
-    right: 6px;
+    top: 10px;
+    right: 10px;
     z-index: 2;
     gap: 5px;
 }
@@ -735,8 +801,9 @@ button {
     align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
+    width: 100%;
     min-height: 86px;
-    padding: 14px 12px;
+    padding: 14px 44px 14px 12px;
     border: 1px solid #d6d6d6;
     border-left: 4px solid #18bd73;
     background: #fff;
@@ -836,6 +903,17 @@ button {
 .selected-table-card strong,
 .selected-table-card p {
     margin: 0;
+}
+
+.selected-table-meta {
+    margin-top: 4px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: rgba(91, 71, 0, 0.85);
+}
+
+.selected-table-meta--error {
+    color: #9f1f1f;
 }
 
 .back-link {
@@ -987,6 +1065,18 @@ button {
 .cart-controls__row--payments,
 .cart-controls__row--flags {
     justify-content: space-around;
+}
+
+.cart-save-feedback {
+    margin: 0;
+    padding: 0 14px 12px;
+    color: #8dffb3;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.cart-save-feedback--error {
+    color: #ffb1b1;
 }
 
 .bottom-actions {

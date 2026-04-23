@@ -1,6 +1,18 @@
 <script setup>
 import AppButton from '../../ui/AppButton.vue'
 
+function getTableNumberLabel(selectedTable) {
+  const label = String(selectedTable?.label ?? '').trim()
+
+  return label || 'Table'
+}
+
+function getFloorLabel(selectedTable, tableDetails) {
+  const floor = String(tableDetails?.floor ?? selectedTable?.sectionTitle ?? '').trim()
+
+  return floor || 'Unassigned'
+}
+
 const props = defineProps({
   orderTypes: {
     type: Array,
@@ -21,6 +33,22 @@ const props = defineProps({
   selectedTable: {
     type: Object,
     default: null,
+  },
+  tableDetails: {
+    type: Object,
+    default: null,
+  },
+  orderSaveSubmitting: {
+    type: Boolean,
+    default: false,
+  },
+  orderSaveMessage: {
+    type: String,
+    default: '',
+  },
+  orderSaveError: {
+    type: String,
+    default: '',
   },
   cart: {
     type: Array,
@@ -55,6 +83,8 @@ const props = defineProps({
 defineEmits([
   'update:selected-order-type',
   'go-back',
+  'open-table-switcher',
+  'save-order',
   'update-quantity',
   'toggle-flag',
   'update:selected-payment-mode',
@@ -77,20 +107,18 @@ defineEmits([
 
     <div class="cart-top-meta">
       <div class="action-strip">
-        <AppButton v-for="tab in props.actionTabs" :key="tab" class="action-strip__button">
+        <AppButton v-for="tab in props.actionTabs" :key="tab" class="action-strip__button" @click="tab === 'Table' ? $emit('open-table-switcher') : null">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path :d="props.iconPath(tab === 'Table' ? 'fork' : tab === 'Guest' ? 'guest' : tab === 'Group' ? 'group' : tab === 'Notes' ? 'note' : 'order')" />
           </svg>
-          <span>{{ tab }}</span>
+          <span>{{ tab === 'Table' ? getTableNumberLabel(props.selectedTable) : tab }}</span>
         </AppButton>
       </div>
 
       <div class="selected-table-card">
         <div>
-          <strong>{{ props.selectedTable?.sectionTitle }}</strong>
-          <p>Table {{ props.selectedTable?.label }}</p>
+          <strong>{{ getFloorLabel(props.selectedTable, props.tableDetails) }}</strong>
         </div>
-        <AppButton class="back-link" @click="$emit('go-back')">Change</AppButton>
       </div>
     </div>
 
@@ -167,8 +195,11 @@ defineEmits([
         </label>
       </div>
 
+      <p v-if="props.orderSaveError" class="cart-save-feedback cart-save-feedback--error">{{ props.orderSaveError }}</p>
+      <p v-else-if="props.orderSaveMessage" class="cart-save-feedback">{{ props.orderSaveMessage }}</p>
+
       <div class="bottom-actions">
-        <AppButton class="bottom-actions__primary">Save</AppButton>
+        <AppButton class="bottom-actions__primary" :disabled="props.orderSaveSubmitting" @click="$emit('save-order')">{{ props.orderSaveSubmitting ? 'Saving...' : 'Save' }}</AppButton>
         <AppButton class="bottom-actions__primary">Save & Print</AppButton>
         <AppButton class="bottom-actions__primary">Save & Bill</AppButton>
         <AppButton class="bottom-actions__dark">KOT</AppButton>

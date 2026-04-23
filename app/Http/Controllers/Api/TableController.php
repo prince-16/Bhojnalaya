@@ -78,7 +78,7 @@ class TableController extends Controller
      */
     public function show(Table $table)
     {
-        $table->load('orders.items');
+        $table->load('orders.items.menuItem');
 
         return response()->json($table);
     }
