@@ -900,6 +900,19 @@ button {
     font-size: 0.75rem;
 }
 
+.note-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #fff1c2;
+    color: #8b5b00;
+    font-size: 0.66rem;
+    font-weight: 800;
+}
+
 .action-strip__button svg {
     width: 22px;
     height: 22px;
@@ -998,10 +1011,28 @@ button {
     margin: 0;
 }
 
+.cart-item__title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .cart-item p {
     margin-top: 4px;
     color: #9a9692;
     font-size: 0.8rem;
+}
+
+.note-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #ffe5d5;
+    color: #b94812;
+    font-size: 0.72rem;
+    font-weight: 800;
 }
 
 .cart-item__note {

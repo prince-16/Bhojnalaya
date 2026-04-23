@@ -80,6 +80,10 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  hasOrderNotes: {
+    type: Boolean,
+    default: false,
+  },
   iconPath: {
     type: Function,
     required: true,
@@ -159,6 +163,7 @@ defineEmits([
       :total-amount="props.totalAmount"
       :payment-modes="props.paymentModes"
       :selected-payment-mode="props.selectedPaymentMode"
+      :has-order-notes="props.hasOrderNotes"
       @update:selected-order-type="$emit('update:selected-order-type', $event)"
       @go-back="$emit('go-back')"
       @open-table-switcher="$emit('open-table-switcher')"

@@ -78,6 +78,10 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  hasOrderNotes: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 defineEmits([
@@ -119,6 +123,7 @@ defineEmits([
             <path :d="props.iconPath(tab === 'Table' ? 'fork' : tab === 'Guest' ? 'guest' : tab === 'Group' ? 'group' : tab === 'Notes' ? 'note' : 'order')" />
           </svg>
           <span>{{ tab === 'Table' ? getTableNumberLabel(props.selectedTable) : tab }}</span>
+          <span v-if="tab === 'Notes' && props.hasOrderNotes" class="note-indicator">Added</span>
         </AppButton>
       </div>
 
@@ -145,7 +150,10 @@ defineEmits([
     <div v-else class="cart-items">
       <article v-for="item in props.cart" :key="item.id" class="cart-item cart-item--clickable" @click="$emit('open-item-notes', item.id)">
         <div>
-          <strong>{{ item.name }}</strong>
+          <div class="cart-item__title-row">
+            <strong>{{ item.name }}</strong>
+            <span v-if="item.notes" class="note-pill">Note</span>
+          </div>
           <p>Selected from {{ props.activeCategory.name }}</p>
           <p v-if="item.notes" class="cart-item__note">Note: {{ item.notes }}</p>
         </div>

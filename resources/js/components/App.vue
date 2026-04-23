@@ -853,6 +853,11 @@ function closeOrderNotesEditor() {
   orderNotesModalOpen.value = false
 }
 
+function clearOrderNotes() {
+  orderNotes.value = ''
+  closeOrderNotesEditor()
+}
+
 function openItemNotesEditor(itemId) {
   const cartItem = cart.find((item) => item.id === itemId)
 
@@ -880,6 +885,16 @@ function saveItemNotes() {
   }
 
   cartItem.notes = itemNotesDraft.value.trim()
+  closeItemNotesEditor()
+}
+
+function clearItemNotes() {
+  const cartItem = cart.find((item) => item.id === selectedCartItemId.value)
+
+  if (cartItem) {
+    cartItem.notes = ''
+  }
+
   closeItemNotesEditor()
 }
 
@@ -1161,6 +1176,7 @@ function formatCurrency(value) {
       :total-amount="totalAmount"
       :payment-modes="paymentModes"
       :selected-payment-mode="selectedPaymentMode"
+      :has-order-notes="Boolean(orderNotes.trim())"
       :icon-path="iconPath"
       :format-currency="formatCurrency"
       @select-category="selectCategory"
@@ -1245,6 +1261,7 @@ function formatCurrency(value) {
           <textarea v-model="orderNotes" class="dialog-textarea" rows="5" placeholder="Example: Serve together, less spicy, no onion in whole order"></textarea>
         </label>
         <div class="dialog-actions">
+          <button v-if="orderNotes.trim()" type="button" class="dialog-button dialog-button--ghost" @click="clearOrderNotes">Clear Note</button>
           <button type="button" class="dialog-button dialog-button--ghost" @click="closeOrderNotesEditor">Close</button>
           <button type="submit" class="dialog-button">Done</button>
         </div>
@@ -1259,6 +1276,7 @@ function formatCurrency(value) {
           <textarea v-model="itemNotesDraft" class="dialog-textarea" rows="5" placeholder="Example: Extra spicy, no garlic, less oil"></textarea>
         </label>
         <div class="dialog-actions">
+          <button v-if="itemNotesDraft.trim()" type="button" class="dialog-button dialog-button--ghost" @click="clearItemNotes">Clear Note</button>
           <button type="button" class="dialog-button dialog-button--ghost" @click="closeItemNotesEditor">Cancel</button>
           <button type="submit" class="dialog-button">Save Note</button>
         </div>
