@@ -12,7 +12,7 @@ const props = defineProps({
   },
 })
 
-defineEmits(['new-order'])
+defineEmits(['new-order', 'menu-select'])
 </script>
 
 <template>
@@ -50,7 +50,7 @@ defineEmits(['new-order'])
       </div>
 
       <nav class="menu-icons" aria-label="Main navigation">
-        <AppButton v-for="item in props.topMenu" :key="item.label" class="menu-icon-button" :aria-label="item.label" :data-tooltip="item.label">
+        <AppButton v-for="item in props.topMenu" :key="item.label" class="menu-icon-button" :aria-label="item.label" :data-tooltip="item.label" @click="$emit('menu-select', item)">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path :d="props.iconPath(item.icon)" />
           </svg>

@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import OrderScreen from './pos/OrderScreen.vue'
+import OrdersScreen from './pos/OrdersScreen.vue'
+import BillsScreen from './pos/BillsScreen.vue'
 import TableScreen from './pos/TableScreen.vue'
 import TopBar from './pos/TopBar.vue'
 
@@ -36,6 +38,12 @@ const topMenu = [
 const menuItems = ref([])
 const menuItemsLoading = ref(false)
 const menuItemsError = ref('')
+const orders = ref([])
+const ordersLoading = ref(false)
+const ordersError = ref('')
+const bills = ref([])
+const billsLoading = ref(false)
+const billsError = ref('')
 
 const menuItemModalOpen = ref(false)
 const menuItemModalMode = ref('create')
@@ -105,6 +113,7 @@ const shortCode = ref('')
 const selectedOrderType = ref('Dine In')
 const selectedPaymentMode = ref('Cash')
 const cart = reactive([])
+const otherPaymentNote = ref('')
 const flags = reactive({
   complimentary: false,
   paid: false,
@@ -213,6 +222,8 @@ function resetSelectedOrderState() {
   currentOrderId.value = null
   currentOrderNumber.value = ''
   selectedTableDetails.value = null
+  selectedPaymentMode.value = 'Cash'
+  otherPaymentNote.value = ''
   cart.splice(0, cart.length)
 }
 
@@ -236,6 +247,9 @@ function syncOrderStateFromTableDetails(tableDetails) {
 
   currentOrderId.value = activeOrder?.id ?? null
   currentOrderNumber.value = activeOrder?.order_number ?? ''
+  selectedOrderType.value = activeOrder?.order_type ?? 'Dine In'
+  selectedPaymentMode.value = activeOrder?.payment_mode ?? 'Cash'
+  otherPaymentNote.value = activeOrder?.payment_mode === 'Other' ? String(activeOrder?.notes ?? '') : ''
 
   const nextCart = Array.isArray(activeOrder?.items)
     ? activeOrder.items.map((item) => ({
@@ -311,6 +325,49 @@ async function fetchMenuItems() {
     menuItems.value = []
   } finally {
     menuItemsLoading.value = false
+  }
+}
+
+async function fetchOrders() {
+  ordersLoading.value = true
+  ordersError.value = ''
+
+  try {
+    const response = await fetch('/api/orders')
+
+    if (!response.ok) {
+      throw new Error(`Unable to load orders (${response.status})`)
+    }
+
+    orders.value = await response.json()
+  } catch (error) {
+    ordersError.value = error instanceof Error ? error.message : 'Failed to load orders'
+    orders.value = []
+  } finally {
+    ordersLoading.value = false
+  }
+}
+
+async function fetchBills() {
+  billsLoading.value = true
+  billsError.value = ''
+
+  try {
+    const response = await fetch('/api/orders')
+
+    if (!response.ok) {
+      throw new Error(`Unable to load bills (${response.status})`)
+    }
+
+    const allOrders = await response.json()
+    bills.value = allOrders.filter((order) =>
+      ['paid', 'billed'].includes(String(order.status ?? '').toLowerCase())
+    )
+  } catch (error) {
+    billsError.value = error instanceof Error ? error.message : 'Failed to load bills'
+    bills.value = []
+  } finally {
+    billsLoading.value = false
   }
 }
 
@@ -695,6 +752,24 @@ function goBackToTables() {
   view.value = 'tables'
 }
 
+async function handleTopMenuSelection(item) {
+  if (item.label === 'Orders') {
+    view.value = 'orders'
+    await fetchOrders()
+    return
+  }
+
+  if (item.label === 'Bills') {
+    view.value = 'bills'
+    await fetchBills()
+    return
+  }
+
+  if (item.label === 'Tables') {
+    view.value = 'tables'
+  }
+}
+
 function openTableSwitcher() {
   tableSwitcherOpen.value = true
 }
@@ -764,6 +839,14 @@ function updateFlag(payload) {
   flags[payload.key] = payload.value
 }
 
+function updateSelectedPaymentMode(mode) {
+  selectedPaymentMode.value = mode
+
+  if (mode !== 'Other') {
+    otherPaymentNote.value = ''
+  }
+}
+
 async function updateSelectedTableStatus(status) {
   if (!selectedTable.value?.id) {
     return
@@ -802,8 +885,10 @@ async function saveOrder() {
     table_id: selectedTable.value.id,
     order_number: orderNumber,
     order_type: selectedOrderType.value,
+    payment_mode: selectedPaymentMode.value,
     status: orderStatus,
     tax_amount: 0,
+    notes: selectedPaymentMode.value === 'Other' ? otherPaymentNote.value : null,
     items: cart.map((item) => ({
       menu_item_id: item.id,
       quantity: item.quantity,
@@ -837,6 +922,7 @@ async function saveOrder() {
     await Promise.all([
       fetchSelectedTableDetails(selectedTable.value.id),
       fetchTables(),
+      fetchOrders(),
     ])
 
     orderSaveMessage.value = 'Order saved successfully'
@@ -847,6 +933,43 @@ async function saveOrder() {
   }
 }
 
+async function openExistingOrder(order) {
+  currentOrderId.value = order.id
+  currentOrderNumber.value = order.order_number ?? ''
+  selectedOrderType.value = order.order_type ?? 'Dine In'
+  selectedPaymentMode.value = order.payment_mode ?? 'Cash'
+  otherPaymentNote.value = order.payment_mode === 'Other' ? String(order.notes ?? '') : ''
+  flags.paid = String(order.status ?? '').toLowerCase() === 'paid'
+  orderSaveMessage.value = ''
+  orderSaveError.value = ''
+
+  cart.splice(0, cart.length, ...(Array.isArray(order.items)
+    ? order.items.map((item) => ({
+        id: item.menu_item_id,
+        name: item.menu_item?.name ?? `Item #${item.menu_item_id}`,
+        price: Number(item.unit_price ?? 0),
+        quantity: Number(item.quantity ?? 1),
+      }))
+    : []))
+
+  if (order.table) {
+    selectedTable.value = {
+      id: order.table.id,
+      label: order.table.name,
+      status: normalizeTableStatus(order.table.status),
+      sectionTitle: order.table.floor?.trim() || 'Unassigned',
+      apiTable: order.table,
+    }
+
+    await fetchSelectedTableDetails(order.table.id)
+  } else {
+    selectedTable.value = null
+    selectedTableDetails.value = null
+  }
+
+  view.value = 'order'
+}
+
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-IN').format(value)
 }
@@ -854,7 +977,7 @@ function formatCurrency(value) {
 
 <template>
   <main class="petpooja-screen">
-    <TopBar :top-menu="topMenu" :icon-path="iconPath" @new-order="goBackToTables" />
+    <TopBar :top-menu="topMenu" :icon-path="iconPath" @new-order="goBackToTables" @menu-select="handleTopMenuSelection" />
 
     <TableScreen
       v-if="view === 'tables'"
@@ -868,6 +991,26 @@ function formatCurrency(value) {
       @quick-action="handleQuickAction"
       @edit-table="openEditTableModal"
       @delete-table="openDeleteConfirm"
+    />
+
+    <OrdersScreen
+      v-else-if="view === 'orders'"
+      :orders="orders"
+      :loading="ordersLoading"
+      :error="ordersError"
+      :format-currency="formatCurrency"
+      @refresh="fetchOrders"
+      @open-order="openExistingOrder"
+    />
+
+    <BillsScreen
+      v-else-if="view === 'bills'"
+      :bills="bills"
+      :loading="billsLoading"
+      :error="billsError"
+      :format-currency="formatCurrency"
+      @refresh="fetchBills"
+      @reopen-bill="openExistingOrder"
     />
 
     <OrderScreen
@@ -894,6 +1037,7 @@ function formatCurrency(value) {
       :payment-modes="paymentModes"
       :selected-payment-mode="selectedPaymentMode"
       :icon-path="iconPath"
+      :other-note="otherPaymentNote"
       :format-currency="formatCurrency"
       @select-category="selectCategory"
       @update:item-search="itemSearch = $event"
@@ -908,7 +1052,8 @@ function formatCurrency(value) {
       @save-order="saveOrder"
       @update-quantity="updateQuantity"
       @toggle-flag="updateFlag"
-      @update:selected-payment-mode="selectedPaymentMode = $event"
+      @update:selected-payment-mode="updateSelectedPaymentMode($event)"
+      @update:other-note="otherPaymentNote = $event"
     />
 
     <div v-if="tableSwitcherOpen" class="dialog-backdrop" @click.self="closeTableSwitcher">

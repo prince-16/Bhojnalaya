@@ -12,6 +12,7 @@ class Order extends Model
         'table_id',
         'order_number',
         'order_type',
+        'payment_mode',
         'status',
         'subtotal',
         'tax_amount',

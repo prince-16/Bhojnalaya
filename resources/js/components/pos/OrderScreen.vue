@@ -80,6 +80,10 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  otherNote: {
+    type: String,
+    default: '',
+  },
   iconPath: {
     type: Function,
     required: true,
@@ -113,6 +117,7 @@ defineEmits([
   'update-quantity',
   'toggle-flag',
   'update:selected-payment-mode',
+  'update:other-note',
 ])
 </script>
 
@@ -157,6 +162,7 @@ defineEmits([
       :total-amount="props.totalAmount"
       :payment-modes="props.paymentModes"
       :selected-payment-mode="props.selectedPaymentMode"
+      :other-note="props.otherNote"
       @update:selected-order-type="$emit('update:selected-order-type', $event)"
       @go-back="$emit('go-back')"
       @open-table-switcher="$emit('open-table-switcher')"
@@ -164,6 +170,7 @@ defineEmits([
       @update-quantity="$emit('update-quantity', $event)"
       @toggle-flag="$emit('toggle-flag', $event)"
       @update:selected-payment-mode="$emit('update:selected-payment-mode', $event)"
+      @update:other-note="$emit('update:other-note', $event)"
     />
   </section>
 </template>
