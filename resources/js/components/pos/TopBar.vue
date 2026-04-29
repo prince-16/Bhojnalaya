@@ -45,7 +45,7 @@ defineEmits(['new-order', 'menu-select'])
         </div>
         <div>
           <p>Call For Support</p>
-          <strong>9099912483</strong>
+          <strong>+91 94070 25998</strong>
         </div>
       </div>
 

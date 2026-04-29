@@ -110,6 +110,5 @@ defineEmits(['open-table', 'refresh', 'quick-action', 'edit-table', 'delete-tabl
 
     <p v-if="!props.loading && !props.sections.length" class="eyebrow">No dining tables found. Use + Add Table to create one.</p>
 
-    <div class="enquiry-banner">For Inquiry Call or WhatsApp : 9034142334</div>
   </section>
 </template>
